@@ -10,8 +10,10 @@ done becomes a version 2, on a repository that already runs.
 - [x] Atomic CSV writing (all or nothing)
 - [x] Network-free tests
 - [x] Tests running on every push
-- [ ] First real collection checked by hand
-- [ ] Replay a slice of the archive (`--start` / `--end`)
+- [x] First real collection checked by hand (720 rows, 5 sites, 6 species)
+- [x] Replay a slice of the archive (`--start 2013-01-01`, 1440 rows)
+- [ ] Run `collect` manually from the Actions tab, to prove the API call works
+      from a GitHub runner and not only from the laptop
 
 ## Week 2 — automation
 

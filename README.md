@@ -1,5 +1,7 @@
 # cams-air-history
 
+[![tests](https://github.com/francoisbernard99/cams-air-history/actions/workflows/tests.yml/badge.svg)](https://github.com/francoisbernard99/cams-air-history/actions/workflows/tests.yml)
+
 Hourly air quality history over France, collected automatically from an open
 public source, archived, and queryable.
 
