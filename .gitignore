@@ -1,0 +1,27 @@
+# Collected data: it regenerates, it does not belong in git.
+data/*
+!data/.gitkeep
+
+# DuckDB database (week 3)
+*.duckdb
+*.duckdb.wal
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.coverage
+
+# This project uses no API key. The line below is hygiene, not a need: if a
+# keyed source is ever added, the secret will not reach the repository by
+# accident.
+.env
+
+# Editors
+.vscode/
+.idea/
+*~
+\#*\#
+.\#*

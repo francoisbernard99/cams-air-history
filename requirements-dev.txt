@@ -1,0 +1,3 @@
+# The collector itself has NO dependency: it uses only the Python standard
+# library. This file covers development tooling only.
+pytest>=8.0

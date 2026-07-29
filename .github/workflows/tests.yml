@@ -1,0 +1,25 @@
+name: tests
+
+# Tests run on every push and on every pull request. None of them touches the
+# network: the result depends only on the code.
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install test tooling
+        run: pip install pytest
+
+      - name: Run tests
+        run: python -m pytest -q
