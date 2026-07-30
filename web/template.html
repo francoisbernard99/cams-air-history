@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>$title</title>
+<meta name="description" content="Historique horaire de la qualité de l'air en France, issu du service européen CAMS. Valeurs modélisées, pas des mesures.">
+<style>
+$style
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Qualité de l'air en France : l'historique</h1>
+  <p class="lede">
+    Chaque matin, un programme va chercher les champs de qualité de l'air du
+    service européen CAMS, les archive, et les rend interrogeables. Cette page
+    est reconstruite à partir de cette archive.
+  </p>
+  <p class="note">Dernière collecte : $updated · $freshness</p>
+</header>
+
+<main>
+
+  <div class="hero">
+    <span class="hero-value">$hero_value</span>
+    <span class="hero-label">$hero_label</span>
+  </div>
+
+  <div class="tiles">
+    $tiles
+  </div>
+
+  <!-- The caveat comes before any chart on purpose: it changes how the charts
+       should be read, so reading it afterwards is too late. -->
+  <section class="caveat">
+    <h2>Ce que ces chiffres ne sont pas</h2>
+    <p>
+      <strong>Ce ne sont pas des mesures.</strong> CAMS est un modèle. Il exploite
+      des observations satellite et des stations au sol, mais ce qu'il renvoie est
+      un champ <em>calculé</em>. Une valeur affichée ici pour Paris à 14 h n'a pas
+      été mesurée à Paris à 14 h : elle a été simulée, sur une maille d'environ
+      11 kilomètres de côté.
+    </p>
+    <ul>
+      <li>
+        Une maille de 11 km moyenne une agglomération entière. Elle ne distingue
+        pas un boulevard d'un parc, alors que l'écart entre les deux peut dépasser
+        l'écart entre deux villes.
+      </li>
+      <li>
+        Un champ modélisé est lisse par construction. Les pics courts et très
+        localisés y sont atténués, parfois absents.
+      </li>
+      <li>
+        Comparer ces valeurs à un seuil réglementaire n'a pas de sens : ces seuils
+        s'appliquent à des mesures normalisées en station, pas à une sortie de
+        modèle.
+      </li>
+    </ul>
+    <p class="note" style="margin-top:0.9rem">
+      Ce que cette page montre est donc une <strong>estimation régionale</strong>,
+      utile pour observer des tendances et des épisodes, inutile pour dire ce
+      qu'une personne respire à une adresse donnée.
+    </p>
+  </section>
+
+  <h2>Les 90 derniers jours</h2>
+  <p class="note">
+    Moyenne journalière des cinq villes suivies. La zone claire couvre l'écart
+    entre la ville la plus basse et la plus haute ce jour-là : une seule courbe
+    ne doit pas laisser croire à une valeur uniforme sur le territoire.
+  </p>
+  <div class="panels">
+    $panels
+  </div>
+
+  <h2>$episode_title</h2>
+  <p class="note">$episode_note</p>
+  <div class="figure">
+    $episode_chart
+    $episode_table
+  </div>
+
+  <h2>Les journées les plus chargées</h2>
+  <p class="note">
+    La pire journée de l'archive pour chaque espèce, jours incomplets exclus.
+    Une journée qui ne compte que quelques heures produirait une moyenne
+    trompeuse.
+  </p>
+  <div class="table-wrap">
+    $worst_table
+  </div>
+
+  <h2>État de l'archive</h2>
+  <p class="note">
+    Une marque par journée archivée. Le rouge signale une journée incomplète,
+    laissée telle quelle : lorsque la source ne répond pas, l'archive préfère
+    un trou visible à un chiffre inventé.
+  </p>
+  <div class="panel">
+    $coverage_strip
+    <div class="legend">
+      <span class="key"><span class="swatch swatch-ok"></span> Journée complète — $complete_days</span>
+      <span class="key"><span class="swatch swatch-short"></span> Journée incomplète — $incomplete_days</span>
+    </div>
+  </div>
+  $health_table
+
+</main>
+
+<footer>
+  <p>
+    Données du service européen <strong>CAMS</strong> (Copernicus Atmosphere
+    Monitoring Service), distribuées par
+    <a href="https://open-meteo.com">Open-Meteo</a> sous licence CC-BY 4.0.
+  </p>
+  <p>
+    Page fabriquée par
+    <a href="https://github.com/francoisbernard99/cams-air-history">cams-air-history</a>
+    — collecte automatique, archive publique, aucune clé d'accès. Code sous
+    licence MIT.
+  </p>
+  <p class="note">Page générée le $generated_at.</p>
+</footer>
+
+</body>
+</html>

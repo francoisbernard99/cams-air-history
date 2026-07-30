@@ -1,0 +1,74 @@
+name: publish
+
+# Rebuilds the page and deploys it to GitHub Pages.
+#
+# Runs after every successful collection, so the published page is never more
+# than a day behind the archive, and on any change to the front itself.
+on:
+  workflow_run:
+    workflows: [collect]
+    types: [completed]
+  push:
+    branches: [main]
+    paths:
+      - web/**
+      - warehouse/**
+      - .github/workflows/publish.yml
+  workflow_dispatch:
+
+# Pages allows one deployment at a time, and an in-flight one must not be
+# cancelled halfway through publishing.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Check out the code
+        uses: actions/checkout@v7
+
+      - name: Check out the data branch
+        uses: actions/checkout@v7
+        with:
+          ref: data
+          path: archive
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.11"
+
+      - name: Install the warehouse dependency
+        run: pip install -r requirements.txt
+
+      - name: Rebuild the warehouse from the archive
+        run: python -m warehouse build --data-dir archive/data
+
+      - name: Render the page
+        run: python -m web --database air.duckdb --output-dir public
+
+      - name: Upload the page
+        uses: actions/upload-pages-artifact@v5
+        with:
+          path: public
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+
+    steps:
+      - name: Deploy to Pages
+        id: deploy
+        uses: actions/deploy-pages@v5

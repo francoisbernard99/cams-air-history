@@ -51,12 +51,20 @@ This is where most of the technical credibility is won.
 
 ## Week 4 — the front
 
-- [ ] Map or dashboard
-- [ ] **The page explaining what the data is and is not** (see the "What this
-      data is — and is not" section of the README) — the core of the project,
-      not an add-on
-- [ ] Complete README: technical choices, limits, how to reproduce
-- [ ] CAMS and Open-Meteo attribution clearly visible
+- [x] Static page generated from the warehouse: inline SVG, no JavaScript, no
+      CDN, one self-contained file
+- [x] **The section explaining what the data is and is not**, placed before the
+      first chart and pinned by a test — the core of the project, not an add-on
+- [x] Freshness stated on the page rather than implied
+- [x] Site spread shown as a band, so one line never reads as a national value
+- [x] The archive nominates its own headline episode (each day against the
+      median of its own species) rather than a hard-coded one
+- [x] A table view beside every chart; light and dark both validated
+- [x] `publish.yml`: rebuild and deploy to Pages after each collection
+- [x] Complete README: technical choices, limits, how to reproduce
+- [x] CAMS and Open-Meteo attribution on the page and in the README
+- [ ] Enable Pages in the repository settings (source: GitHub Actions)
+- [ ] Look at the deployed page on a phone as well as a laptop
 
 ## Later (version 2, out of scope)
 

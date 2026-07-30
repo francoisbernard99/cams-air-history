@@ -158,6 +158,31 @@ Two properties the tests pin down, because SQL fails silently:
 Thresholds used in the queries are reading aids, **not regulatory limits** —
 see the section above on what this data is.
 
+## The published page
+
+```bash
+python -m warehouse build --data-dir archive/data
+python -m web                       # writes public/index.html
+```
+
+One self-contained HTML file, rebuilt by the workflow after every successful
+collection and deployed to GitHub Pages. **No JavaScript, no charting library,
+no CDN** — the charts are inline SVG written by Python, so the page renders
+before any script could run and will still render years from now.
+
+- The **caveat comes before the first chart**, because it changes how every
+  chart should be read. A test asserts it is present: if it ever dropped out of
+  the template, the page would start passing modelled values off as measurements.
+- **Freshness is stated, not implied.** A page that silently shows stale data is
+  worse than one admitting it is behind.
+- The band around each line is the **spread across sites**, so a single line
+  never passes itself off as a uniform national value.
+- The archive **nominates its own headline episode**: each day is divided by the
+  median of its own species, since 80 µg/m³ of ozone is ordinary and the same
+  figure in PM2.5 is not. Nothing is hard-coded.
+- Every chart ships a **table view**, so no value is reachable only by hovering.
+- Light and dark are two validated sets of steps, not an automatic inversion.
+
 ## Tests
 
 ```bash
@@ -182,12 +207,18 @@ warehouse/
   build.py      rebuild the database from the CSV files
   queries/      one .sql file per question
   __main__.py   entry point
+web/
+  charts.py     inline SVG, no dependency, no JavaScript
+  template.html page structure
+  style.css     palette, marks, light and dark
+  build.py      warehouse -> one self-contained HTML file
 tests/          network-free tests
 docs/
   DECISIONS.md  log of technical decisions
 .github/workflows/
   tests.yml     tests on every push
   collect.yml   scheduled collection
+  publish.yml   rebuild the page and deploy to Pages
 data/           output (not tracked)
 ```
 

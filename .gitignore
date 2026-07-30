@@ -11,6 +11,9 @@ data/*
 #   git worktree add archive data
 archive/
 
+# Rendered page: also derived, rebuilt by `python -m web`.
+public/
+
 # Python
 __pycache__/
 *.py[cod]

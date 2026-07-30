@@ -14,24 +14,32 @@ from warehouse import build as warehouse
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
-    parser = argparse.ArgumentParser(
-        prog="warehouse",
-        description="Query the archive of collected air quality data.",
-    )
-    parser.add_argument(
+    # The shared options live on a parent parser so they are accepted on either
+    # side of the subcommand. Argparse otherwise only takes them *before* it,
+    # and `warehouse build --data-dir X` failing is a trap not worth setting.
+    common = argparse.ArgumentParser(add_help=False)
+    common.add_argument(
         "--data-dir",
         default=warehouse.DEFAULT_DATA_DIR,
         help="directory holding the daily CSV files",
     )
-    parser.add_argument(
+    common.add_argument(
         "--database", default=warehouse.DEFAULT_DATABASE, help="DuckDB file"
     )
 
-    commands = parser.add_subparsers(dest="command", required=True)
-    commands.add_parser("build", help="rebuild the database from the CSV files")
-    commands.add_parser("list", help="list the questions available")
+    parser = argparse.ArgumentParser(
+        prog="warehouse",
+        parents=[common],
+        description="Query the archive of collected air quality data.",
+    )
 
-    ask = commands.add_parser("ask", help="answer one question")
+    commands = parser.add_subparsers(dest="command", required=True)
+    commands.add_parser("build", parents=[common],
+                        help="rebuild the database from the CSV files")
+    commands.add_parser("list", parents=[common],
+                        help="list the questions available")
+
+    ask = commands.add_parser("ask", parents=[common], help="answer one question")
     ask.add_argument("name", help="query name, as listed by `list`")
     ask.add_argument("--limit", type=int, default=20, help="rows to display")
 

@@ -1,0 +1,236 @@
+/* Palette, marks and chrome follow one validated system. Light and dark are two
+   selected sets of steps, not an automatic inversion: each was checked against
+   the surface it actually renders on. */
+
+:root {
+  color-scheme: light;
+
+  --surface-1: #fcfcfb;
+  --page: #f9f9f7;
+  --text-primary: #0b0b0b;
+  --text-secondary: #52514e;
+  --text-muted: #898781;
+  --grid: #e1e0d9;
+  --axis: #c3c2b7;
+  --border: rgba(11, 11, 11, 0.1);
+
+  --series-1: #2a78d6;
+  --status-good: #0ca30c;
+  --status-critical: #d03b3b;
+
+  --sans: system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+
+    --surface-1: #1a1a19;
+    --page: #0d0d0d;
+    --text-primary: #ffffff;
+    --text-secondary: #c3c2b7;
+    --text-muted: #898781;
+    --grid: #2c2c2a;
+    --axis: #383835;
+    --border: rgba(255, 255, 255, 0.1);
+
+    --series-1: #3987e5;
+  }
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  padding: 0 1.25rem 4rem;
+  background: var(--page);
+  color: var(--text-primary);
+  font-family: var(--sans);
+  font-size: 1rem;
+  line-height: 1.6;
+}
+
+main, header, footer { max-width: 62rem; margin: 0 auto; }
+
+header { padding: 3rem 0 1.5rem; }
+
+h1 {
+  margin: 0 0 0.5rem;
+  font-size: 1.9rem;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+}
+
+h2 {
+  margin: 3rem 0 0.35rem;
+  font-size: 1.2rem;
+  font-weight: 620;
+}
+
+h3 {
+  margin: 0 0 0.5rem;
+  font-size: 0.9rem;
+  font-weight: 560;
+  color: var(--text-secondary);
+}
+
+p { margin: 0 0 0.9rem; max-width: 46rem; }
+
+.lede { color: var(--text-secondary); font-size: 1.05rem; }
+.note { color: var(--text-muted); font-size: 0.875rem; }
+
+a { color: var(--series-1); text-decoration-thickness: 1px; text-underline-offset: 2px; }
+
+/* Hero figure: proportional figures, same sans as everything else. */
+.hero {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.6rem 1.5rem;
+  margin: 1.5rem 0 0.25rem;
+}
+
+.hero-value { font-size: 3.25rem; font-weight: 650; line-height: 1; }
+.hero-label { color: var(--text-secondary); }
+
+.tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+  gap: 1px;
+  margin: 1.75rem 0 0;
+  background: var(--border);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.tile { background: var(--surface-1); padding: 0.9rem 1rem; }
+.tile-label { color: var(--text-muted); font-size: 0.8rem; }
+.tile-value { font-size: 1.3rem; font-weight: 600; }
+
+/* The caveat is part of the content, not a footnote. */
+.caveat {
+  margin: 2.5rem 0 0;
+  padding: 1.25rem 1.5rem;
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--status-critical);
+  border-radius: 10px;
+}
+
+.caveat h2 { margin-top: 0; }
+.caveat ul { margin: 0.5rem 0 0; padding-left: 1.2rem; color: var(--text-secondary); }
+.caveat li { margin-bottom: 0.4rem; max-width: 44rem; }
+
+.panels {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(17rem, 1fr));
+  gap: 1rem;
+  margin: 1.5rem 0 0;
+}
+
+.panel, .figure {
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 1rem 1.1rem 0.75rem;
+}
+
+.figure { margin: 1.5rem 0 0; }
+
+/* The height follows the width so the drawing keeps its proportions, and the
+   viewBox already includes the axis band -- no nested scrollbar, no clipping. */
+.chart { display: block; width: 100%; height: auto; }
+
+/* The strip is rectangles only: it may stretch to any width at a fixed height. */
+.strip { display: block; width: 100%; height: 34px; }
+
+.line {
+  fill: none;
+  stroke: var(--series-1);
+  stroke-width: 2;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+
+.band { fill: var(--series-1); fill-opacity: 0.1; }
+.marker { fill: var(--series-1); }
+.marker-ring { fill: var(--surface-1); }
+.hit { fill: transparent; }
+.grid { stroke: var(--grid); stroke-width: 1; }
+
+/* In viewBox units: a panel renders around its natural size, so 11 here lands
+   near 11px on screen rather than shrinking into illegibility. */
+.tick {
+  fill: var(--text-muted);
+  font-size: 11px;
+  font-family: var(--sans);
+  font-variant-numeric: tabular-nums;
+}
+
+/* A complete day is the normal case, so it stays quiet: 942 saturated blocks
+   would shout the least interesting thing on the page. Red keeps full weight. */
+.day-ok { fill: var(--status-good); fill-opacity: 0.38; }
+.day-short { fill: var(--status-critical); }
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 1.25rem;
+  margin: 0.6rem 0 0;
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+}
+
+.key { display: inline-flex; align-items: center; gap: 0.4rem; }
+.swatch { width: 0.7rem; height: 0.7rem; border-radius: 2px; }
+.swatch-ok { background: var(--status-good); opacity: 0.38; }
+.swatch-short { background: var(--status-critical); }
+
+details { margin: 0.75rem 0 0; }
+
+summary {
+  cursor: pointer;
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+}
+
+.table-wrap { overflow-x: auto; margin: 0.75rem 0 0; }
+
+table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 0.875rem;
+  font-variant-numeric: tabular-nums;
+}
+
+caption {
+  text-align: left;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  padding-bottom: 0.5rem;
+}
+
+th, td {
+  text-align: left;
+  padding: 0.4rem 0.75rem 0.4rem 0;
+  border-bottom: 1px solid var(--grid);
+  white-space: nowrap;
+}
+
+th { color: var(--text-muted); font-weight: 560; }
+
+.empty { color: var(--text-muted); font-style: italic; }
+
+/* The panel grid is sized so a chart never renders much below its natural
+   width, which is what keeps the axis text legible. */
+.panels .chart { max-width: 100%; }
+
+footer {
+  margin-top: 4rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--border);
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+}
+
