@@ -39,13 +39,15 @@ This is where most of the technical credibility is won.
 
 ## Week 3 — memory
 
-- [ ] DuckDB database fed by the CSV files
-- [ ] **Backfill the archive**: it goes back to 2013, the database does not
-      have to wait to fill itself
-- [ ] Queries answering real questions: worst day of the month, how long an
-      episode lasted, comparison between two periods
-- [ ] Idempotent collection: replaying the same day twice must not duplicate
-      rows
+- [x] DuckDB database fed by the CSV files, rebuilt in seconds, never committed
+- [x] Idempotent collection: one file per day means replaying a day replaces it
+- [x] Queries answering real questions, one reviewable `.sql` file each:
+      `overview`, `worst-days`, `day-over-day`, `episodes`, `archive-health`
+- [x] Window functions applied where they earn their keep: `RANK()` per
+      species, `LAG()` partitioned by site, gaps-and-islands for episodes
+- [x] Data quality guarded in SQL: incomplete days excluded from rankings, a
+      missing hour splits an episode rather than papering over it
+- [ ] **Backfill the archive**: it goes back to 2013, one year per call
 
 ## Week 4 — the front
 

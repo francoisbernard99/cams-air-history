@@ -119,9 +119,44 @@ The collected files are published on a dedicated **`data` branch**, not on
 rather than one per day of data.
 
 ```bash
-git switch data     # browse the archive
-git switch main     # back to the code
+git worktree add archive data   # both branches checked out at once
 ```
+
+That puts the archive in `archive/data/`, the same layout the workflow uses.
+
+## Asking the archive questions
+
+```bash
+pip install -r requirements.txt
+
+python -m warehouse build            # (re)build the database from the CSV files
+python -m warehouse list             # the questions available
+python -m warehouse ask worst-days   # answer one
+```
+
+The database is a **derived artifact**: rebuilt from the CSV files in seconds,
+never committed. The files on the `data` branch stay the source of truth, so a
+corrupted or outdated database is fixed by rebuilding, never by repairing.
+
+Each question is one reviewable `.sql` file in `warehouse/queries/`:
+
+| Question | What it uses |
+|---|---|
+| `overview` | what the archive holds, per species — read this first |
+| `worst-days` | `RANK()` within each species, complete days only |
+| `day-over-day` | `LAG()` partitioned by site, so no site reads another's value |
+| `episodes` | gaps and islands: how long a run of hours above a level lasted |
+| `archive-health` | incomplete days and recorded outages — **meant to return nothing** |
+
+Two properties the tests pin down, because SQL fails silently:
+
+- an **incomplete day is excluded** from rankings. Six hours averaged against
+  twenty-four is an artefact, not a record.
+- a **missing hour splits an episode in two**. An archive with a hole must not
+  claim a continuity it cannot prove.
+
+Thresholds used in the queries are reading aids, **not regulatory limits** —
+see the section above on what this data is.
 
 ## Tests
 
@@ -142,6 +177,11 @@ collector/
   storage.py    atomic CSV writing, one file per day
   runlog.py     append-only log of runs and outages
   __main__.py   entry point, exit codes
+warehouse/
+  schema.sql    tables and views
+  build.py      rebuild the database from the CSV files
+  queries/      one .sql file per question
+  __main__.py   entry point
 tests/          network-free tests
 docs/
   DECISIONS.md  log of technical decisions

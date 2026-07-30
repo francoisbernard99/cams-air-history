@@ -148,6 +148,73 @@ one year at a time.
 
 ---
 
+## 2026-07-30 — The database is derived, the CSV files are the truth
+
+**Context.** A DuckDB file could have been committed to the `data` branch,
+saving a rebuild step.
+
+**Decision.** It is never committed. `python -m warehouse build` rebuilds it
+from the CSV files in about a second, and `.gitignore` excludes `*.duckdb`.
+
+**Why.** A binary blob in git history is a blob you can never remove. And a
+database that is rebuilt on every run cannot silently drift away from its
+source: a corrupted or outdated warehouse is fixed by rebuilding, never by
+repairing.
+
+**Cost.** One command to run before querying, and DuckDB becomes a dependency
+of the analysis side. The collector keeps its own dependency count at zero --
+the job that must run unattended every morning cannot break because of a
+library upgrade, while the analysis side can afford richer tools.
+
+---
+
+## 2026-07-30 — The `runs` table is declared, not inferred
+
+**Context.** `read_json_auto` infers columns from the file. A run log that has
+never recorded an outage contains no `error` key at all.
+
+**Decision.** The table is declared explicitly in `schema.sql`, and the log is
+loaded with `INSERT INTO runs BY NAME`.
+
+**Why.** Otherwise the schema would change shape on the day of the first
+outage — exactly when a query against it is most needed. A test pins this down:
+loading a log with no outage must still produce an `error` column.
+
+---
+
+## 2026-07-30 — Data quality enforced in SQL, not in commentary
+
+**Context.** Incomplete days and missing hours are real: an outage leaves them
+behind by design.
+
+**Decisions, each with a test:**
+
+- `worst-days` filters on `hours = 24`. Six hours averaged against twenty-four
+  produces an artefact that would rank as a record.
+- `episodes` builds its island key from real timestamps, so a missing hour
+  splits an episode in two rather than bridging it.
+- `archive-health` exists to return nothing. Knowing that an empty result *is*
+  the good news is the whole reason for keeping a run log.
+
+**Why in SQL rather than in the README.** A warning in prose is read once. A
+`WHERE` clause holds every time, including by whoever copies the query.
+
+---
+
+## 2026-07-30 — One .sql file per question
+
+**Decision.** `warehouse/queries/<name>.sql`, discovered by filename. The CLI
+lists what exists rather than hard-coding a menu.
+
+**Why.** Each question is reviewable on its own, diffs cleanly, and can be
+copied straight into a SQL client. Adding a question means adding a file, with
+no Python to touch.
+
+**Cost.** No parameters yet — thresholds are written into the query. Fine while
+the questions are few; revisit when they need arguments.
+
+---
+
 ## Still to decide
 
 - **Week 2** — where produced data lands: dedicated branch, run artifact, or

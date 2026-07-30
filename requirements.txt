@@ -1,0 +1,6 @@
+# Runtime dependencies of the warehouse only.
+#
+# The collector deliberately has none: it uses the Python standard library, so
+# the job that must run unattended every morning cannot break because of a
+# library upgrade. The analysis side can afford richer tools.
+duckdb>=1.0

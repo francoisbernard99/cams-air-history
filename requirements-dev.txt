@@ -1,3 +1,5 @@
-# The collector itself has NO dependency: it uses only the Python standard
-# library. This file covers development tooling only.
+# Development tooling, on top of the warehouse runtime dependencies.
+# The collector itself needs neither: standard library only.
+-r requirements.txt
+
 pytest>=8.0

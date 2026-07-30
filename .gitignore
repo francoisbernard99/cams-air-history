@@ -2,9 +2,14 @@
 data/*
 !data/.gitkeep
 
-# DuckDB database (week 3)
+# The warehouse is derived: rebuilt from the CSV files in seconds, never
+# committed. A binary blob in git history is a blob you can never remove.
 *.duckdb
 *.duckdb.wal
+
+# Worktree holding the `data` branch, created with:
+#   git worktree add archive data
+archive/
 
 # Python
 __pycache__/
