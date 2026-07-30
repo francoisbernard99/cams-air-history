@@ -47,6 +47,9 @@ BACKOFF_SECONDS = 2.0
 # HTTP response timeout, in seconds.
 TIMEOUT_SECONDS = 60
 
+# Run log, written next to the data. One JSON object per line.
+RUN_LOG_NAME = "runs.jsonl"
+
 # Output columns, in order.
 # Long format: one row per (hour, site, species). This is the shape SQL and
 # DuckDB handle most naturally.

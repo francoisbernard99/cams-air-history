@@ -19,12 +19,16 @@ done becomes a version 2, on a repository that already runs.
 
 This is where most of the technical credibility is won.
 
-- [ ] Enable the `schedule` block in `.github/workflows/collect.yml`
-- [ ] **Graceful degradation**: if the source does not answer, keep the last
-      valid collection, report the outage, break nothing
-- [ ] Decide where produced data lands (dedicated branch, artifact, or
-      published output) — settle it in `docs/DECISIONS.md`
-- [ ] Collection log: date, duration, volume received, incidents
+- [x] Publish to a dedicated `data` branch, keeping `main` history readable
+- [x] **Graceful degradation**: an outage keeps the last valid data, is
+      reported, and does not break the run
+- [x] Exit codes separating an outage (code 2, self-healing) from a bug
+      (code 1, needs a human)
+- [x] Run log in `data/runs.jsonl`: date, range, duration, rows, incidents
+- [x] **Self-repair**: the scheduled run asks for a seven-day window, so a gap
+      closes on its own the next morning
+- [x] Enable the `schedule` block in `.github/workflows/collect.yml`
+- [ ] Watch a first scheduled run land on its own
 - [ ] Extend coverage beyond the five cities
 
   The real engineering problem of this project: covering France at 0.1 deg

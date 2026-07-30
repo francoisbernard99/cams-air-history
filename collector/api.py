@@ -21,12 +21,15 @@ class SourceUnavailable(Exception):
 def build_url(
     sites: list[dict],
     species: list[str],
-    start_date: str | None = None,
-    end_date: str | None = None,
-    past_days: int | None = None,
-    forecast_days: int = 1,
+    start_date: str,
+    end_date: str,
 ) -> str:
-    """Build the request URL.
+    """Build the request URL for an explicit day range.
+
+    Every request is a date range, today included -- a range covering only
+    today returns its 24 hours just as well. Having a single code path means
+    the daily run and a backfill of 2013 go through exactly the same code, so
+    the rare one is exercised as often as the common one.
 
     The API accepts several coordinates in a single call, comma separated.
     That is what will later allow covering France without exceeding the quota
@@ -36,19 +39,9 @@ def build_url(
         "latitude": ",".join(str(s["latitude"]) for s in sites),
         "longitude": ",".join(str(s["longitude"]) for s in sites),
         "hourly": ",".join(species),
+        "start_date": start_date,
+        "end_date": end_date,
     }
-
-    # `start_date`/`end_date` replay the archive (it goes back to 2013).
-    # `past_days` catches up on the days that just went by.
-    # The two do not combine: an explicit date range wins.
-    if start_date and end_date:
-        params["start_date"] = start_date
-        params["end_date"] = end_date
-    else:
-        params["forecast_days"] = forecast_days
-        if past_days is not None:
-            params["past_days"] = past_days
-
     return f"{config.API_URL}?{urllib.parse.urlencode(params)}"
 
 

@@ -76,14 +76,52 @@ quality indices. Enable them in `collector/config.py`.
 ## Usage
 
 ```bash
-python -m collector                                       # current day
-python -m collector --past-days 7                         # the last 7 days
-python -m collector --start 2013-01-01 --end 2013-12-31   # replay the archive
+python -m collector                                       # today
+python -m collector --catch-up 7                          # today plus the last 7 days
+python -m collector --start 2013-01-01 --end 2013-12-31   # backfill a year
 python -m collector --dry-run                             # print the URL only
 ```
 
+Every request is a date range, and the result is always written as **one CSV
+file per calendar day**. Refetching a window therefore rewrites those days
+rather than appending to them — running the same command twice changes nothing.
+
 The archive goes back to **2013**. The historical database does not have to
-fill up slowly over time: it can be loaded from day one.
+fill up slowly over time: it can be loaded from day one, one year per call
+(a year for one point and six species is about 400 KB, in under a second).
+
+## When the source goes down
+
+An unattended collector is judged on what it does on a bad day, not a good one.
+
+- The run **keeps the last valid data**. Nothing is deleted, truncated or
+  blanked. A day that could not be fetched simply stays missing.
+- The run **records the outage** in `data/runs.jsonl`, one JSON object per
+  line. A job that goes green because it handled a failure gracefully would
+  otherwise hide the hole it just left.
+- The next run **repairs the gap on its own**. The scheduled job asks for a
+  seven-day window, so yesterday's outage is refilled this morning with nobody
+  intervening.
+- Exit codes separate the two kinds of failure, because automation reads them:
+
+  | Code | Meaning | The run |
+  |---|---|---|
+  | `0` | collection succeeded | green |
+  | `1` | unexpected failure, a bug | red — it needs a human |
+  | `2` | source unavailable | green with a warning — it repairs itself |
+
+An outage is not a bug. Turning it red would train you to ignore red.
+
+## Where the data lives
+
+The collected files are published on a dedicated **`data` branch**, not on
+`main`. The history of `main` stays readable — one commit per code change,
+rather than one per day of data.
+
+```bash
+git switch data     # browse the archive
+git switch main     # back to the code
+```
 
 ## Tests
 
@@ -101,8 +139,9 @@ the source goes down, and you end up not trusting your own test suite.
 collector/
   config.py     settings: species, sites, retries
   api.py        HTTP call, retries, reshaping
-  storage.py    atomic CSV writing
-  __main__.py   entry point
+  storage.py    atomic CSV writing, one file per day
+  runlog.py     append-only log of runs and outages
+  __main__.py   entry point, exit codes
 tests/          network-free tests
 docs/
   DECISIONS.md  log of technical decisions

@@ -37,15 +37,15 @@ PAYLOADS = [
 def test_build_url_batches_coordinates():
     """Several sites fit in a single call: this is what will allow covering
     France without blowing the daily quota."""
-    url = api.build_url(SITES, ["pm2_5"])
+    url = api.build_url(SITES, ["pm2_5"], "2026-07-29", "2026-07-29")
     assert "latitude=48.85%2C45.76" in url
     assert "longitude=2.35%2C4.84" in url
 
 
-def test_build_url_date_range_wins_over_forecast():
-    url = api.build_url(SITES, ["pm2_5"], start_date="2013-01-01", end_date="2013-01-02")
+def test_build_url_always_carries_an_explicit_range():
+    url = api.build_url(SITES, ["pm2_5"], "2013-01-01", "2013-01-02")
     assert "start_date=2013-01-01" in url
-    assert "forecast_days" not in url
+    assert "end_date=2013-01-02" in url
 
 
 def test_to_rows_unfolds_every_hour_and_species():

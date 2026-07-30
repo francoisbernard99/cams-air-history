@@ -1,17 +1,21 @@
 name: collect
 
-# WEEK 1: manual trigger only, to check that collection works in CI and not
-# just on the laptop.
+# Runs every morning and publishes to the `data` branch.
 #
-# WEEK 2: uncomment the `schedule` block below. Offsetting to minute 17 is
-# deliberate -- jobs scheduled on the hour land in a saturated queue at GitHub
-# and start late.
+# Minute 17 is deliberate: jobs scheduled on the hour land in a saturated queue
+# at GitHub and start late.
 on:
+  schedule:
+    - cron: "17 5 * * *"
   workflow_dispatch:
-  # schedule:
-  #   - cron: "17 5 * * *"
+    inputs:
+      catch_up_days:
+        description: "Also refetch the last N days"
+        required: false
+        default: "7"
 
-# One collection at a time. Two concurrent runs would write the same file.
+# One collection at a time. Two concurrent runs would push to the same branch
+# and one of them would be rejected.
 concurrency:
   group: collect
   cancel-in-progress: false
@@ -25,18 +29,68 @@ jobs:
     timeout-minutes: 15
 
     steps:
-      - uses: actions/checkout@v7
+      - name: Check out the code
+        uses: actions/checkout@v7
+
+      # The data lives on its own branch, so the history of `main` stays
+      # readable: one commit per code change, not one per day of data.
+      - name: Check out the data branch
+        uses: actions/checkout@v7
+        with:
+          ref: data
+          path: archive
 
       - uses: actions/setup-python@v7
         with:
           python-version: "3.11"
 
       # No dependency install: the collector only uses the standard library.
+      #
+      # A seven day window by default. Yesterday's outage is repaired by
+      # today's run, without anyone intervening.
       - name: Collect
-        run: python -m collector --output-dir data
+        id: collect
+        run: |
+          set +e
+          python -m collector \
+            --output-dir archive/data \
+            --catch-up "${{ inputs.catch_up_days || 7 }}"
+          code=$?
+          set -e
+          case $code in
+            0) echo "outcome=ok" >> "$GITHUB_OUTPUT" ;;
+            2) echo "outcome=outage" >> "$GITHUB_OUTPUT"
+               echo "::warning::Source unavailable. Last valid data kept, the next run will refetch this window." ;;
+            *) echo "::error::Collector failed unexpectedly (exit $code)"
+               exit $code ;;
+          esac
 
-      # TODO week 2: publish the result (commit to a data branch, upload as an
-      # artifact, or GitHub Pages). Decide in docs/DECISIONS.md before writing
-      # this step.
+      # Runs even on an outage: the run log must record the hole, otherwise a
+      # gap in the archive is invisible.
+      - name: Publish to the data branch
+        if: always() && steps.collect.outcome != 'skipped'
+        working-directory: archive
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data
+          if git diff --cached --quiet; then
+            echo "nothing new to publish"
+          else
+            git commit -m "data: ${{ steps.collect.outputs.outcome }} run $(date -u +%Y-%m-%dT%H:%MZ)"
+            git push
+          fi
+
       - name: Summary
-        run: ls -lh data/
+        if: always()
+        working-directory: archive
+        run: |
+          {
+            echo "### Collection: ${{ steps.collect.outputs.outcome }}"
+            echo
+            echo "Last 5 runs:"
+            echo '```'
+            tail -n 5 data/runs.jsonl 2>/dev/null || echo "no run log yet"
+            echo '```'
+            echo "Days archived: $(ls data/air-quality-*.csv 2>/dev/null | wc -l)"
+          } >> "$GITHUB_STEP_SUMMARY"
