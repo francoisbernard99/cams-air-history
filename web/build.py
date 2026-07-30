@@ -249,6 +249,11 @@ def render(database: str = DEFAULT_DATABASE) -> str:
         anomalies = _anomalies(connection)
         health = _health_rows(connection)
         last_run = connection.execute("SELECT max(run_at) FROM runs").fetchone()[0]
+        # Read from the archive rather than from config: the page must name the
+        # points it actually plotted, not the ones the collector is set to.
+        sites = [row[0] for row in connection.execute(
+            "SELECT DISTINCT site FROM readings ORDER BY site"
+        ).fetchall()]
         episode_hours = (
             _episode_hours(connection, anomalies[0][2], anomalies[0][0], anomalies[0][1])
             if anomalies else []
@@ -373,6 +378,9 @@ def render(database: str = DEFAULT_DATABASE) -> str:
         freshness=freshness,
         hero_value=f"{summary['days']:,}".replace(",", " "),
         hero_label="journées archivées, heure par heure",
+        site_count=str(len(sites)),
+        site_list=escape(", ".join(sites[:-1]) + " et " + sites[-1]) if len(sites) > 1
+        else escape(sites[0]) if sites else "aucun",
         tiles=tiles,
         panels=panels,
         episode_title=episode_title,

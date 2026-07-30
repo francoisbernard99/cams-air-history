@@ -63,7 +63,10 @@ This is where most of the technical credibility is won.
 - [x] `publish.yml`: rebuild and deploy to Pages after each collection
 - [x] Complete README: technical choices, limits, how to reproduce
 - [x] CAMS and Open-Meteo attribution on the page and in the README
-- [ ] Enable Pages in the repository settings (source: GitHub Actions)
+- [x] Enable Pages in the repository settings (source: GitHub Actions)
+- [x] Page live at https://francoisbernard99.github.io/cams-air-history/
+- [ ] Watch one scheduled collection land on its own and trigger a publish,
+      with nobody touching anything. Until that happens the chain is unproven.
 - [ ] Look at the deployed page on a phone as well as a laptop
 
 ## Later (version 2, out of scope)
