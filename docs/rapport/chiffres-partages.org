@@ -1,6 +1,5 @@
 #+TITLE: Chiffres du projet, calculés depuis l'archive
 #+AUTHOR: François BERNARD
-#+PROPERTY: header-args:python :session chiffres :exports results :eval never-export
 
 # Ce fichier ne s'exporte pas seul. Il est inclus par le rapport et par la
 # présentation, pour que les deux citent exactement les mêmes chiffres.
@@ -15,30 +14,68 @@
 #
 # Puis dans Emacs : C-c C-v b pour tout réévaluer avant export.
 #
-# ATTENTION : les en-têtes de chaque bloc répètent :session, :exports et :eval,
-# alors que la ligne #+PROPERTY ci-dessus dit déjà la même chose. Ce n'est pas
-# une redondance inutile. #+INCLUDE n'importe QUE le contenu du sous-arbre : les
-# mots-clés du fichier, dont #+PROPERTY, restent derrière. Un bloc inclus
-# ailleurs perdrait donc sa session et son réglage d'export, et se retrouverait
-# imprimé tel quel dans le document. Les blocs doivent être autonomes.
-# La ligne #+PROPERTY sert quand on travaille dans ce fichier seul.
+#
+# DEUX POINTS À NE PAS DÉFAIRE
+#
+# 1. Chaque bloc porte son en-tête complet (:noweb, :exports, :eval), alors
+#    qu'une ligne #+PROPERTY en tête de fichier dirait la même chose en une
+#    fois. #+INCLUDE n'importe QUE le contenu du sous-arbre : les mots-clés du
+#    fichier restent derrière. Un bloc inclus ailleurs perdrait donc ses
+#    réglages et se retrouverait imprimé tel quel dans le document.
+#
+# 2. Aucun bloc n'utilise :session, et c'est délibéré. En mode session,
+#    org-babel envoie le corps ligne à ligne à un interpréteur vivant, où un
+#    `return` au niveau supérieur est une erreur de syntaxe — silencieusement
+#    avalée, laissant un tableau vide. Sans session, org-babel enveloppe le
+#    corps dans une fonction et `return` fonctionne. Le code commun est partagé
+#    par noweb (<<preparation>>), qui l'insère dans chaque bloc à l'évaluation.
+#    Chaque bloc est donc autonome et reproductible isolément.
 
-* Connexion à l'entrepôt                                           :noexport:
+* Préparation                                                      :noexport:
 
-#+NAME: connexion
-#+BEGIN_SRC python :session chiffres :results silent :exports none :eval never-export
+#+NAME: preparation
+#+BEGIN_SRC python :results none :exports none :eval never-export
 import duckdb, pathlib
+
 RACINE = pathlib.Path("../..").resolve()
 con = duckdb.connect(str(RACINE / "air.duckdb"), read_only=True)
+
+# Noms lisibles pour le document. Une espèce absente de ce tableau garde sa clé,
+# donc en activer une nouvelle dans le collecteur ne casse rien ici.
+ESPECES = {
+    "pm2_5": "PM2,5", "pm10": "PM10",
+    "nitrogen_dioxide": "NO₂", "ozone": "O₃",
+    "sulphur_dioxide": "SO₂", "carbon_monoxide": "CO",
+}
+
+def cellule(valeur):
+    """Org-babel ne convertit que les nombres et les chaînes.
+
+    Une date Python lui arrive comme un objet qu'il éclate en deux cellules,
+    ce qui décale silencieusement toute la ligne. On convertit donc ici tout
+    ce qui n'est pas un nombre, et on traduit les noms d'espèces au passage.
+    """
+    if valeur is None:
+        return ""
+    if isinstance(valeur, bool):
+        return str(valeur)
+    if isinstance(valeur, (int, float)):
+        return valeur
+    return ESPECES.get(str(valeur), str(valeur))
+
 def table(sql):
-    r = con.execute(sql)
-    return [[d[0] for d in r.description], None] + [list(x) for x in r.fetchall()]
+    """Une requête, un tableau Org : en-têtes, filet, puis les lignes."""
+    curseur = con.execute(sql)
+    entetes = [d[0] for d in curseur.description]
+    lignes = [[cellule(v) for v in ligne] for ligne in curseur.fetchall()]
+    return [entetes, None] + lignes
 #+END_SRC
 
 * Étendue de l'archive
 
 #+NAME: tab-etendue
-#+BEGIN_SRC python :session chiffres :results value table :exports results :eval never-export
+#+BEGIN_SRC python :noweb yes :results value table :exports results :eval never-export
+<<preparation>>
 return table("""
 SELECT count(*)                                  AS "Valeurs horaires",
        count(DISTINCT CAST(measured_at AS DATE)) AS "Journées",
@@ -50,23 +87,33 @@ FROM readings""")
 #+END_SRC
 
 #+RESULTS: tab-etendue
-|   |
+| Valeurs horaires | Journées | Points | Espèces |      Début |        Fin |
+|------------------+----------+--------+---------+------------+------------|
+|           678240 |      942 |      5 |       6 | 2024-01-01 | 2026-07-30 |
 
 * Ce que contient l'archive, par espèce
 
 #+NAME: tab-especes
-#+BEGIN_SRC python :session chiffres :results value table :exports results :eval never-export
+#+BEGIN_SRC python :noweb yes :results value table :exports results :eval never-export
+<<preparation>>
 return table("""
-SELECT species                    AS "Espèce",
-       any_value(unit)            AS "Unité",
+SELECT species                     AS "Espèce",
+       any_value(unit)             AS "Unité",
        round(median(mean_value),2) AS "Journée médiane",
-       round(max(mean_value),1)   AS "Pire journée",
-       round(max(max_value),1)    AS "Pointe horaire"
+       round(max(mean_value),1)    AS "Pire journée",
+       round(max(max_value),1)     AS "Pointe horaire"
 FROM daily WHERE hours = 24 GROUP BY species ORDER BY species""")
 #+END_SRC
 
 #+RESULTS: tab-especes
-|   |
+| Espèce | Unité | Journée médiane | Pire journée | Pointe horaire |
+|--------+-------+-----------------+--------------+----------------|
+| CO     | μg/m³ |          180.67 |        920.8 |         3486.0 |
+| NO₂    | μg/m³ |           11.79 |         75.2 |          117.6 |
+| O₃     | μg/m³ |           59.96 |        123.3 |          212.0 |
+| PM10   | μg/m³ |           12.35 |        114.4 |          387.1 |
+| PM2,5  | μg/m³ |            8.05 |         83.1 |          282.9 |
+| SO₂    | μg/m³ |            1.22 |         17.6 |           40.5 |
 
 * Les écarts les plus forts à la normale
 
@@ -74,7 +121,8 @@ FROM daily WHERE hours = 24 GROUP BY species ORDER BY species""")
 # désignent la même journée au même endroit.
 
 #+NAME: tab-anomalies
-#+BEGIN_SRC python :session chiffres :results value table :exports results :eval never-export
+#+BEGIN_SRC python :noweb yes :results value table :exports results :eval never-export
+<<preparation>>
 return table("""
 WITH spread AS (
   SELECT species, median(mean_value) AS mediane,
@@ -91,7 +139,13 @@ LIMIT 5""")
 #+END_SRC
 
 #+RESULTS: tab-anomalies
-|   |
+| Espèce |    Journée | Point    | Moyenne | Médiane de l'espèce | Écart |
+|--------+------------+----------+---------+---------------------+-------|
+| PM10   | 2026-07-26 | Bordeaux |   114.4 |               12.35 |   9.1 |
+| CO     | 2026-07-26 | Bordeaux |   920.8 |              180.67 |   8.3 |
+| PM2,5  | 2026-07-26 | Bordeaux |    83.1 |                8.05 |   7.8 |
+| SO₂    | 2025-01-14 | Paris    |    17.6 |                1.22 |   7.3 |
+| CO     | 2024-12-31 | Lyon     |   804.0 |              180.67 |   7.0 |
 
 * Modèle contre mesure au sol, épisode de Bordeaux
 
@@ -99,7 +153,8 @@ LIMIT 5""")
 # Station FR31002, fond urbain, à 4,5 km du point CAMS.
 
 #+NAME: tab-validation
-#+BEGIN_SRC python :session chiffres :results value table :exports results :eval never-export
+#+BEGIN_SRC python :noweb yes :results value table :exports results :eval never-export
+<<preparation>>
 con.execute("INSTALL httpfs; LOAD httpfs;")
 URL = ("https://eeadmz1batchservice02.blob.core.windows.net/"
        "airquality-p/FR/SPO-FR31002_6001.parquet")
@@ -122,20 +177,30 @@ FROM modele m JOIN mesure s USING (h) GROUP BY 1 ORDER BY 1""")
 #+END_SRC
 
 #+RESULTS: tab-validation
-|   |
+|    Journée | Heures | Station | CAMS | Biais | Pointe station | Pointe CAMS |
+|------------+--------+---------+------+-------+----------------+-------------|
+| 2026-07-25 |     24 |    49.7 | 14.1 | -35.7 |          285.7 |        41.7 |
+| 2026-07-26 |     24 |   119.6 | 83.1 | -36.5 |          224.3 |       282.9 |
+| 2026-07-27 |     24 |    10.1 | 10.0 |  -0.0 |           30.5 |        26.1 |
 
 * Volume et santé du dépôt
 
 #+NAME: tab-depot
-#+BEGIN_SRC python :session chiffres :results value table :exports results :eval never-export
-gaps = con.execute("SELECT count(*) FROM gaps").fetchone()[0]
+#+BEGIN_SRC python :noweb yes :results value table :exports results :eval never-export
+<<preparation>>
+incompletes = con.execute("SELECT count(*) FROM gaps").fetchone()[0]
 pannes = con.execute("SELECT count(*) FROM runs WHERE outcome <> 'ok'").fetchone()[0]
 return [["Indicateur", "Valeur"], None,
-        ["Journées incomplètes", gaps],
+        ["Journées incomplètes", incompletes],
         ["Collectes en panne", pannes],
         ["Dépendances du collecteur", 0],
         ["Dépendances de l'entrepôt", 1]]
 #+END_SRC
 
 #+RESULTS: tab-depot
-|   |
+| Indicateur                | Valeur |
+|---------------------------+--------|
+| Journées incomplètes      |      0 |
+| Collectes en panne        |      0 |
+| Dépendances du collecteur |      0 |
+| Dépendances de l'entrepôt |      1 |

@@ -47,7 +47,6 @@
 #+LATEX_HEADER: \setbeamercolor{block title}{fg=white, bg=navy}
 #+LATEX_HEADER: \setbeamercolor{block body}{bg=navy!6}
 
-#+INCLUDE: "chiffres-partages.org::*Connexion à l'entrepôt" :only-contents t
 
 * La question
 

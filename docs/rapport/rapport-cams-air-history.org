@@ -87,7 +87,6 @@ des évaluations menées à chaque étape, y compris de celles qui ont conclu qu
 j'avais tort.
 #+END_QUOTE
 
-#+INCLUDE: "chiffres-partages.org::*Connexion à l'entrepôt" :only-contents t
 
 * @@latex:\faCompass\enspace@@ Introduction
 
