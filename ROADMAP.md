@@ -65,8 +65,12 @@ This is where most of the technical credibility is won.
 - [x] CAMS and Open-Meteo attribution on the page and in the README
 - [x] Enable Pages in the repository settings (source: GitHub Actions)
 - [x] Page live at https://francoisbernard99.github.io/cams-air-history/
-- [ ] Watch one scheduled collection land on its own and trigger a publish,
-      with nobody touching anything. Until that happens the chain is unproven.
+- [x] Watch one scheduled collection land on its own and trigger a publish,
+      with nobody touching anything — `collect #3: Scheduled`, 2026-07-31 08:10 UTC,
+      publish chained 7 minutes later. The whole point of the project, proven.
+      Note: the cron is set for 05:17 UTC and fired at 08:10. GitHub runs
+      scheduled jobs when its queue allows. The seven-day catch-up window is
+      what makes that irrelevant.
 - [ ] Look at the deployed page on a phone as well as a laptop
 
 ## Later (version 2, out of scope)
