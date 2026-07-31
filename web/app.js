@@ -467,6 +467,29 @@
     if (!event.target.closest(".map-search")) closeResults();
   });
 
+  /* ---- station layer --------------------------------------------------- */
+  /* The markers are already in the SVG, drawn by Python. All this does is
+     decide which ones are visible, so the layer works the moment the page
+     renders rather than after a round trip. */
+
+  var stationsGroup = document.getElementById("stations");
+  var stationsFilter = document.getElementById("stations-filter");
+  var stationsNote = document.getElementById("stations-note");
+
+  if (stationsFilter && stationsGroup) {
+    stationsFilter.addEventListener("change", function () {
+      var showing = stationsFilter.value;
+      stationsGroup.setAttribute("data-showing", showing);
+      stationsNote.hidden = showing === "none";
+      if (showing !== "none") {
+        var shown = stationsGroup.querySelectorAll(
+          showing === "all" ? ".station" : '.station[data-type="' + showing + '"]'
+        ).length;
+        say(shown + " stations affichées. Survolez-en une pour son type.");
+      }
+    });
+  }
+
   /* ---- zone drawing ---------------------------------------------------- */
 
   var drag = null;

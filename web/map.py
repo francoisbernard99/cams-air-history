@@ -7,8 +7,38 @@ the live request -- it never has to fetch a basemap.
 
 import json
 from html import escape
+from pathlib import Path
 
 from web import geo
+
+STATIONS_PATH = Path(__file__).parent / "assets" / "stations.json"
+
+
+def _stations(proj: dict, labels: dict[str, str]) -> tuple[str, int]:
+    """Measurement stations, drawn into the SVG rather than added by script.
+
+    They are the counterpoint to the whole page: the model says what it
+    computes, these say what was actually measured. Rendering them server-side
+    means they exist even with scripting off, and their tooltips are the
+    browser's own.
+    """
+    if not STATIONS_PATH.is_file():
+        return "", 0
+
+    data = json.loads(STATIONS_PATH.read_text(encoding="utf-8"))
+    marks = []
+    for code, commune, lon, lat, kind, area, species in data["stations"]:
+        x, y = geo.to_svg(lon, lat, proj)
+        mesure = ", ".join(labels.get(s, s) for s in species)
+        titre = (f"{commune} — {code}\n"
+                 f"{data['types'][kind]}, {data['areas'][area]}\n"
+                 f"mesure : {mesure}")
+        marks.append(
+            f'<circle class="station" data-type="{data["types"][kind]}" '
+            f'cx="{x:.1f}" cy="{y:.1f}" r="2.6">'
+            f"<title>{escape(titre)}</title></circle>"
+        )
+    return "".join(marks), len(data["stations"])
 
 
 def figure(sites: list[dict], species: list[str], labels: dict[str, str]) -> str:
@@ -20,6 +50,8 @@ def figure(sites: list[dict], species: list[str], labels: dict[str, str]) -> str
         f"</title></path>"
         for shape in shapes
     )
+
+    stations, station_count = _stations(proj, labels)
 
     # The archived points, focusable so the map can be driven from a keyboard.
     markers = ""
@@ -56,6 +88,16 @@ def figure(sites: list[dict], species: list[str], labels: dict[str, str]) -> str
         <button type="button" data-mode="point" aria-pressed="true">Pointer</button>
         <button type="button" data-mode="zone" aria-pressed="false">Zone</button>
       </span>
+      <span class="map-layer">
+        <label for="stations-filter">Stations</label>
+        <select id="stations-filter">
+          <option value="none" selected>masquées</option>
+          <option value="fond">de fond</option>
+          <option value="trafic">de trafic</option>
+          <option value="industriel">industrielles</option>
+          <option value="all">toutes</option>
+        </select>
+      </span>
       <span id="map-status" class="note">Chargement…</span>
     </figcaption>
 
@@ -63,9 +105,18 @@ def figure(sites: list[dict], species: list[str], labels: dict[str, str]) -> str
          role="application"
          aria-label="Carte de France : cliquez un point pour obtenir ses concentrations">
       {paths}
+      <g id="stations" data-showing="none">{stations}</g>
       {markers}
       <rect class="zone-box" x="0" y="0" width="0" height="0" style="display:none"/>
     </svg>
+
+    <p id="stations-note" class="note" hidden>
+      {station_count} stations de mesure du réseau français, publiées par l'Agence
+      européenne pour l'environnement. Elles mesurent&nbsp;; la carte, elle,
+      affiche un modèle. Une station de trafic décrit quelques mètres de rue,
+      que la maille de 11&nbsp;km ne prétend pas représenter&nbsp;: l'écart y est
+      attendu, et le lire comme une erreur du modèle serait une faute.
+    </p>
 
     <div id="map-panel" class="map-panel"></div>
   </figure>

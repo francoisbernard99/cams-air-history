@@ -107,6 +107,26 @@ def test_the_commune_index_is_ranked_by_population():
     assert len(index["lon"]) == len(noms) == len(index["cp"].split("\n"))
 
 
+def test_the_stations_are_drawn_into_the_page(page):
+    """Rendered by Python, not added by script: the layer has to exist even
+    where scripting is off, and its tooltips are the browser's own."""
+    assert page.count('class="station"') > 500
+    assert 'id="stations-filter"' in page
+
+
+def test_the_station_layer_is_hidden_until_asked_for(page):
+    """746 extra marks over a map of France is noise until someone wants them."""
+    assert 'id="stations" data-showing="none"' in page
+
+
+def test_the_stations_carry_their_classification(page):
+    """The type is the whole point of showing them: a traffic station measures
+    something the model never claimed to describe."""
+    for kind in ("fond", "trafic", "industriel"):
+        assert 'data-type="%s"' % kind in page
+    assert "l'écart y est" in page or "l’écart y est" in page
+
+
 def test_the_caveat_is_present(page):
     """If this drops out, the page starts passing modelled values off as
     measurements. Asserted on the claims rather than on one exact sentence, so
@@ -179,7 +199,13 @@ def test_species_order_follows_the_collection_config(archive):  # noqa: F811
     warehouse.build(str(data_dir), database)
 
     rendered = web.render(database)
-    assert rendered.index("Particules PM2,5") < rendered.index("Ozone (O")
+
+    # Scoped to the archive panels on purpose. Species names also appear in the
+    # station tooltips further up the page, and a whole-page search would
+    # compare those instead -- passing or failing for reasons unrelated to the
+    # order this test is about.
+    panels = rendered.split('<div class="panels">')[1].split("</div>\n\n  <h2>")[0]
+    assert panels.index("Particules PM2,5") < panels.index("Ozone (O")
 
 
 def test_build_writes_a_self_contained_file(archive, tmp_path):  # noqa: F811

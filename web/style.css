@@ -416,3 +416,40 @@ footer {
 #commune-results li:hover,
 #commune-results li[aria-selected="true"] { background: var(--grid); }
 #commune-results li.empty { color: var(--text-muted); font-style: italic; cursor: default; }
+
+/* ---- Measurement stations --------------------------------------------- */
+
+.map-layer { display: inline-flex; align-items: center; gap: 0.4rem; font-size: 0.875rem; }
+.map-layer label { color: var(--text-secondary); }
+
+#stations-filter {
+  padding: 0.34rem 0.5rem;
+  background: var(--surface-1);
+  color: var(--text-primary);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font: inherit;
+  font-size: 0.875rem;
+}
+
+/* Orange, distinct from the blue that means "the model" everywhere else on
+   this page. Type is carried by the tooltip and the filter, never by hue: three
+   colours on a map already carrying regions and a pin would read as noise. */
+.station {
+  fill: #eb6834;
+  fill-opacity: 0.75;
+  stroke: var(--surface-1);
+  stroke-width: 0.6;
+  pointer-events: none;
+  display: none;
+}
+
+:root[data-theme="dark"] .station { fill: #d95926; }
+
+#stations[data-showing="all"] .station,
+#stations[data-showing="fond"] .station[data-type="fond"],
+#stations[data-showing="trafic"] .station[data-type="trafic"],
+#stations[data-showing="industriel"] .station[data-type="industriel"] {
+  display: block;
+  pointer-events: auto;
+}
