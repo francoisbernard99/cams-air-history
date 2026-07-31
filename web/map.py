@@ -27,18 +27,19 @@ def _stations(proj: dict, labels: dict[str, str]) -> tuple[str, int]:
 
     data = json.loads(STATIONS_PATH.read_text(encoding="utf-8"))
     marks = []
-    for code, commune, lon, lat, kind, area, species in data["stations"]:
+    for code, commune, lon, lat, kind, area, species, active in data["stations"]:
         x, y = geo.to_svg(lon, lat, proj)
-        mesure = ", ".join(labels.get(s, s) for s in species)
+        mesure = (", ".join(labels.get(s, s) for s in species) if species
+                  else "ne publie plus")
         titre = (f"{commune} — {code}\n"
                  f"{data['types'][kind]}, {data['areas'][area]}\n"
-                 f"mesure : {mesure}")
+                 f"{'mesure : ' + mesure if active else mesure}")
         marks.append(
             f'<circle class="station" data-type="{data["types"][kind]}" '
-            f'cx="{x:.1f}" cy="{y:.1f}" r="2.6">'
+            f'data-active="{active}" cx="{x:.1f}" cy="{y:.1f}" r="2.6">'
             f"<title>{escape(titre)}</title></circle>"
         )
-    return "".join(marks), len(data["stations"])
+    return "".join(marks), data
 
 
 def figure(sites: list[dict], species: list[str], labels: dict[str, str]) -> str:
@@ -51,7 +52,9 @@ def figure(sites: list[dict], species: list[str], labels: dict[str, str]) -> str
         for shape in shapes
     )
 
-    stations, station_count = _stations(proj, labels)
+    stations, station_data = _stations(proj, labels)
+    total = len(station_data.get("stations", [])) if station_data else 0
+    actives = station_data.get("actives", 0) if station_data else 0
 
     # The archived points, focusable so the map can be driven from a keyboard.
     markers = ""
@@ -95,7 +98,8 @@ def figure(sites: list[dict], species: list[str], labels: dict[str, str]) -> str
           <option value="fond">de fond</option>
           <option value="trafic">de trafic</option>
           <option value="industriel">industrielles</option>
-          <option value="all">toutes</option>
+          <option value="all">toutes les actives</option>
+          <option value="inactive">celles qui ne publient plus</option>
         </select>
       </span>
       <span id="map-status" class="note">Chargement…</span>
@@ -111,11 +115,16 @@ def figure(sites: list[dict], species: list[str], labels: dict[str, str]) -> str
     </svg>
 
     <p id="stations-note" class="note" hidden>
-      {station_count} stations de mesure du réseau français, publiées par l'Agence
-      européenne pour l'environnement. Elles mesurent&nbsp;; la carte, elle,
-      affiche un modèle. Une station de trafic décrit quelques mètres de rue,
-      que la maille de 11&nbsp;km ne prétend pas représenter&nbsp;: l'écart y est
-      attendu, et le lire comme une erreur du modèle serait une faute.
+      Réseau français de mesure, d'après l'Agence européenne pour
+      l'environnement&nbsp;: <strong>{actives} stations publient actuellement</strong>,
+      sur {total} présentes dans les métadonnées. Les {total - actives} autres
+      figurent au registre mais n'envoient plus rien&nbsp;; les afficher comme
+      utilisables serait trompeur.
+      <br>
+      Elles mesurent&nbsp;; la carte, elle, affiche un modèle calculé sur une
+      maille d'environ 11&nbsp;km de côté. Une station de trafic décrit quelques
+      mètres de rue, que cette maille ne prétend pas représenter&nbsp;: l'écart y
+      est attendu, et le lire comme une erreur du modèle serait une faute.
     </p>
 
     <div id="map-panel" class="map-panel"></div>

@@ -446,10 +446,15 @@ footer {
 
 :root[data-theme="dark"] .station { fill: #d95926; }
 
-#stations[data-showing="all"] .station,
-#stations[data-showing="fond"] .station[data-type="fond"],
-#stations[data-showing="trafic"] .station[data-type="trafic"],
-#stations[data-showing="industriel"] .station[data-type="industriel"] {
+/* A station that no longer publishes is drawn hollow and grey: it belongs to
+   the network's history, never to what can be compared today. */
+.station[data-active="0"] { fill: none; stroke: var(--text-muted); stroke-width: 1; }
+
+#stations[data-showing="all"] .station[data-active="1"],
+#stations[data-showing="fond"] .station[data-type="fond"][data-active="1"],
+#stations[data-showing="trafic"] .station[data-type="trafic"][data-active="1"],
+#stations[data-showing="industriel"] .station[data-type="industriel"][data-active="1"],
+#stations[data-showing="inactive"] .station[data-active="0"] {
   display: block;
   pointer-events: auto;
 }

@@ -119,12 +119,52 @@ def test_the_station_layer_is_hidden_until_asked_for(page):
     assert 'id="stations" data-showing="none"' in page
 
 
+def flat(text: str) -> str:
+    """Collapse whitespace before searching for a sentence.
+
+    Prose gets rewrapped; asserting on a literal that spans a line break makes
+    the test fail on reformatting and pass on nothing useful.
+    """
+    return " ".join(text.split())
+
+
 def test_the_stations_carry_their_classification(page):
     """The type is the whole point of showing them: a traffic station measures
     something the model never claimed to describe."""
     for kind in ("fond", "trafic", "industriel"):
         assert 'data-type="%s"' % kind in page
-    assert "l'écart y est" in page or "l’écart y est" in page
+
+    prose = flat(page)
+    assert "station de trafic décrit quelques mètres de rue" in prose
+    assert "maille ne prétend pas représenter" in prose
+    assert "erreur du modèle serait une faute" in prose
+
+
+def test_inactive_stations_are_marked_apart(page):
+    """A third of the network is in the metadata but publishes nothing. Drawing
+    those like the rest would present them as usable, which they are not."""
+    marks = re.findall(r'<circle class="station"[^>]*data-active="(\d)"', page)
+
+    assert marks.count("0") > 100, "aucune station inactive détectée"
+    assert marks.count("1") > marks.count("0")
+    assert 'data-showing="none"' in page      # hidden until asked for
+
+    prose = flat(page)
+    assert "stations publient actuellement" in prose
+    assert "les afficher comme utilisables serait trompeur" in prose
+
+
+def test_activity_comes_from_what_is_published(page):
+    """Read from the download service, not from the metadata's declared end
+    date: the two disagree by about a third of the network."""
+    index = json.loads((web.HERE / "assets" / "stations.json").read_text(encoding="utf-8"))
+    actives = [s for s in index["stations"] if s[7]]
+
+    assert index["actives"] == len(actives)
+    # An active station lists what it currently publishes; an inactive one lists
+    # nothing at all, rather than what it used to measure.
+    assert all(s[6] for s in actives)
+    assert all(not s[6] for s in index["stations"] if not s[7])
 
 
 def test_the_caveat_is_present(page):

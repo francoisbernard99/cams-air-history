@@ -333,6 +333,60 @@ depends on it.
 
 ---
 
+## 2026-07-31 — A station is active if it publishes, not if it says so
+
+**Context.** The EEA metadata lists 746 French stations measuring the species
+this project collects. Showing them all suggests 746 points of comparison.
+
+**Decision.** Activity is read from the download service — which files it
+currently serves in the near-real-time stream — not from the metadata's
+`ObservationDateEnd`.
+
+**Why.** The metadata field is *declared*, one row per sampling point, and one
+station spans several rows with different periods; counting on it means trusting
+a statement. Asking which files exist observes a fact. **They disagree by 274
+stations, over a third of the network.**
+
+Inactive stations stay on the map but are drawn hollow and grey, and are hidden
+unless explicitly asked for. The history of the network is informative; passing
+it off as available data is not.
+
+**What this exposed.** The ability to evaluate the model varies enormously by
+species — 377 stations publish NO₂, only **21 publish CO**. A national validation
+of the model on carbon monoxide is out of reach, and no one says so.
+
+---
+
+## 2026-07-31 — The model must be sampled at the station's own coordinates
+
+**Context.** The first model-versus-measurement comparison in this project put
+CAMS at Bordeaux's city point against station FR31002, **4.5 km away**. That was
+wrong, and it took a reviewer to see it.
+
+**Decision.** Any comparison requests the model at the station's exact latitude
+and longitude. Open-Meteo accepts arbitrary coordinates, so there is no reason
+to accept an offset.
+
+**The distinction that matters**, and that this mistake blurred:
+
+| | |
+|---|---|
+| **Sampling error** | comparing a station to a model point kilometres away. Avoidable — ours to fix. |
+| **Representativeness error** | comparing a point measurement to an ~11 × 11 km volume average. Intrinsic — to be interpreted, not corrected. |
+
+Sampling at the station's coordinates removes the first. The second remains, and
+it is the actual subject.
+
+**A consequence worth exploiting.** Two stations inside one grid cell receive the
+same model value by construction, so their disagreement measures the sub-grid
+variability no 11 km model can resolve — a floor on achievable performance.
+**431 of the 746 French stations share a cell with at least one other**, and
+several cells hold both background and traffic stations at once (Gennevilliers 9,
+Toulouse 9, Rouen 8). Those cells can put a figure, in µg/m³, on how much station
+typology matters — measured, not asserted.
+
+---
+
 ## Still to decide
 
 - **Week 2** — where produced data lands: dedicated branch, run artifact, or

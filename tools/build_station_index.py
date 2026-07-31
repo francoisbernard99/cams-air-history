@@ -16,15 +16,27 @@ measures a microenvironment a few metres wide that an 11 km model cell does not
 claim to describe. Comparing the two and calling the gap a model error would be
 a mistake. The type and area fields are what make an honest comparison possible,
 so they are the reason this index exists.
+
+Why activity is read from the download service and not from the metadata: the
+metadata's ObservationDateEnd is *declared*, one row per sampling point, and a
+station appears in several rows at once. Trusting it means trusting a statement.
+Asking the download service which files it currently publishes means observing a
+fact. The two disagree by about a third of the network.
 """
 
 import json
 import math
 import pathlib
+import re
 import sys
 import urllib.request
 
 METADATA_URL = "https://discomap.eea.europa.eu/map/fme/metadata/PanEuropean_metadata.csv"
+DOWNLOADS_API = "https://eeadmz1-downloads-api-appservice.azurewebsites.net"
+VOCABULARY = "http://dd.eionet.europa.eu/vocabulary/aq/pollutant/"
+
+# dataset 1 is the near-real-time stream: what is being published right now.
+NEAR_REAL_TIME = 1
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 CACHE = ROOT / "tools" / ".eea_metadata.csv"
@@ -54,6 +66,35 @@ def download() -> pathlib.Path:
     CACHE.parent.mkdir(parents=True, exist_ok=True)
     urllib.request.urlretrieve(METADATA_URL, CACHE)
     return CACHE
+
+
+def published_now() -> dict[str, set[str]]:
+    """Which stations the EEA is currently publishing, and for which species.
+
+    One request per species. The answer is the list of files that exist, so a
+    station missing here is not producing data whatever its metadata claims.
+    """
+    published: dict[str, set[str]] = {}
+
+    for code, name in SPECIES.items():
+        body = json.dumps({
+            "countries": ["FR"], "cities": [],
+            "pollutants": [VOCABULARY + code],
+            "dataset": NEAR_REAL_TIME, "source": "Api",
+        }).encode()
+        request = urllib.request.Request(
+            DOWNLOADS_API + "/ParquetFile/urls", data=body,
+            headers={"Content-Type": "application/json"},
+        )
+        with urllib.request.urlopen(request, timeout=120) as response:
+            listing = response.read().decode("utf-8", "replace")
+
+        codes = set(re.findall(r"SPO-(FR[A-Z0-9]+)_", listing))
+        for eoi in codes:
+            published.setdefault(eoi, set()).add(name)
+        print(f"  {name:22} {len(codes):4} stations publient")
+
+    return published
 
 
 def read_stations(path: pathlib.Path) -> dict:
@@ -129,18 +170,34 @@ def main() -> int:
         return 1
 
     stations = read_stations(download())
-    print(f"{len(stations)} stations françaises retenues")
+    print(f"{len(stations)} stations dans les métadonnées")
+
+    print("ce que l'AEE publie réellement aujourd'hui :")
+    live = published_now()
+
+    # A station's species list becomes what it publishes, not what it declares.
+    # Anything still in the metadata but absent from the download service is
+    # kept and flagged: the network's history is informative, but it must never
+    # be mistaken for something usable.
+    for eoi, station in stations.items():
+        station["species"] = sorted(live.get(eoi, set()))
+        station["active"] = bool(station["species"])
+
+    actives = sum(1 for s in stations.values() if s["active"])
+    print(f"{actives} actives, {len(stations) - actives} sans publication courante")
+
     nearest_commune(stations)
 
     ordered = sorted(stations.values(), key=lambda s: s["code"])
     payload = {
         "source": "Agence européenne pour l'environnement — métadonnées des "
-                  "stations de mesure de la qualité de l'air",
+                  "stations et service de téléchargement (flux temps quasi réel)",
         "types": ["fond", "trafic", "industriel"],
         "areas": ["urbain", "périurbain", "rural"],
+        "actives": actives,
         "stations": [
             [s["code"], s["commune"], round(s["lon"], 3), round(s["lat"], 3),
-             s["type"], s["area"], sorted(s["species"])]
+             s["type"], s["area"], s["species"], 1 if s["active"] else 0]
             for s in ordered
         ],
     }
