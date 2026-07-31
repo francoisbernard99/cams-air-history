@@ -2,3 +2,4 @@
 {"days": 366, "duration_s": 1.64, "outcome": "ok", "range": "2024-01-01..2024-12-31", "rows": 263520, "run_at": "2026-07-30T09:01:53+00:00", "sites": 5, "species": 6}
 {"days": 365, "duration_s": 1.79, "outcome": "ok", "range": "2025-01-01..2025-12-31", "rows": 262800, "run_at": "2026-07-30T09:01:55+00:00", "sites": 5, "species": 6}
 {"days": 211, "duration_s": 1.48, "outcome": "ok", "range": "2026-01-01..2026-07-30", "rows": 151920, "run_at": "2026-07-30T09:01:57+00:00", "sites": 5, "species": 6}
+{"days": 8, "duration_s": 0.65, "outcome": "ok", "range": "2026-07-24..2026-07-31", "rows": 5760, "run_at": "2026-07-31T08:10:10+00:00", "sites": 5, "species": 6}
