@@ -316,6 +316,159 @@
          "Médiane sur l'ensemble des points de la zone, trente derniers jours.");
   }
 
+  /* ---- commune search -------------------------------------------------- */
+  /* The index is 35 000 communes: too heavy to inline, so it is fetched from
+     this same site on the first keystroke and kept for the session. Nothing is
+     asked of a third party. */
+
+  var search = document.getElementById("commune");
+  var results = document.getElementById("commune-results");
+  var index = null;
+  var loading = null;
+  var highlighted = -1;
+
+  function fold(text) {
+    // Accents and punctuation must not stand between someone and their town:
+    // "st etienne" has to find "Saint-Étienne" is beyond this, but "st-etienne"
+    // and "Saint-Etienne" should at least agree on their letters.
+    return text.toLowerCase().normalize("NFD")
+      .replace(/[̀-ͯ]/g, "")
+      .replace(/['’\-\s]/g, "");
+  }
+
+  function loadIndex() {
+    if (index) return Promise.resolve(index);
+    if (loading) return loading;
+
+    // Opened straight from disk, a browser refuses fetch() even for a file
+    // sitting in the same folder. Saying so beats reporting "NetworkError",
+    // which sends the reader looking for a problem that is not theirs.
+    if (location.protocol === "file:") {
+      say("La recherche demande que la page soit servie par un serveur. " +
+          "Depuis le dossier public : python3 -m http.server 8000");
+      return Promise.reject(new Error("file://"));
+    }
+
+    say("Chargement de la liste des communes…", true);
+    loading = fetch(config.communes).then(function (response) {
+      if (!response.ok) throw new Error("HTTP " + response.status);
+      return response.json();
+    }).then(function (data) {
+      var noms = data.noms.split("\n");
+      index = {
+        noms: noms,
+        plies: noms.map(fold),
+        cp: data.cp.split("\n"),
+        lon: data.lon,
+        lat: data.lat
+      };
+      say("Tapez le début d'un nom de commune.");
+      return index;
+    }).catch(function (error) {
+      loading = null;
+      say("Liste des communes indisponible (" + error.message + "). " +
+          "Le reste de la carte fonctionne : cliquez directement dessus.");
+      throw error;
+    });
+    return loading;
+  }
+
+  /* The index is sorted by population, so scanning in order and stopping at
+     eight already puts the largest matches first -- no scoring needed. */
+  function lookup(query, limit) {
+    var plie = fold(query);
+    var chiffres = /^\d{2,5}$/.test(query.trim());
+    var found = [];
+    for (var i = 0; i < index.noms.length && found.length < limit; i++) {
+      var hit = chiffres
+        ? index.cp[i].indexOf(query.trim()) === 0
+        : index.plies[i].indexOf(plie) === 0;
+      if (hit) found.push(i);
+    }
+    return found;
+  }
+
+  function closeResults() {
+    results.hidden = true;
+    results.innerHTML = "";
+    search.setAttribute("aria-expanded", "false");
+    highlighted = -1;
+  }
+
+  function showResults(found) {
+    if (!found.length) {
+      results.innerHTML = '<li class="empty" role="presentation">Aucune commune.</li>';
+    } else {
+      results.innerHTML = found.map(function (i, rank) {
+        return '<li role="option" id="commune-' + rank + '" data-index="' + i +
+               '" aria-selected="false"><strong>' + index.noms[i] +
+               "</strong> <span class=\"note\">" + index.cp[i] + "</span></li>";
+      }).join("");
+    }
+    results.hidden = false;
+    search.setAttribute("aria-expanded", "true");
+    highlighted = -1;
+  }
+
+  function choose(i) {
+    var lon = index.lon[i], lat = index.lat[i];
+    var x = (Math.PI * lon / 180 - config.xMin) * config.scale;
+    var mercY = Math.log(Math.tan(Math.PI / 4 + Math.PI * lat / 360));
+    var y = (config.yMax - mercY) * config.scale;
+
+    marker(x, y);
+    closeResults();
+    search.value = index.noms[i];
+    load([{ lat: lat, lon: lon }],
+         index.noms[i] + " — " + index.cp[i],
+         "Trente derniers jours sur la maille du modèle qui couvre cette commune.");
+  }
+
+  function refresh() {
+    var query = search.value.trim();
+    if (query.length < 2) { closeResults(); return; }
+    loadIndex().then(function () { showResults(lookup(query, 8)); })
+               .catch(function () { closeResults(); });
+  }
+
+  var typing = null;
+  search.addEventListener("input", function () {
+    clearTimeout(typing);
+    typing = setTimeout(refresh, 120);
+  });
+
+  search.addEventListener("keydown", function (event) {
+    var options = results.querySelectorAll("li[data-index]");
+    if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+      if (!options.length) return;
+      event.preventDefault();
+      highlighted += event.key === "ArrowDown" ? 1 : -1;
+      if (highlighted < 0) highlighted = options.length - 1;
+      if (highlighted >= options.length) highlighted = 0;
+      Array.prototype.forEach.call(options, function (node, rank) {
+        node.setAttribute("aria-selected", String(rank === highlighted));
+      });
+      search.setAttribute("aria-activedescendant", "commune-" + highlighted);
+    } else if (event.key === "Enter") {
+      event.preventDefault();
+      var pick = options[highlighted >= 0 ? highlighted : 0];
+      if (pick) choose(parseInt(pick.getAttribute("data-index"), 10));
+    } else if (event.key === "Escape") {
+      closeResults();
+    }
+  });
+
+  results.addEventListener("click", function (event) {
+    var item = event.target.closest("li[data-index]");
+    if (item) choose(parseInt(item.getAttribute("data-index"), 10));
+  });
+
+  document.addEventListener("click", function (event) {
+    if (!event.target.closest(".map-search")) closeResults();
+  });
+
+  /* ---- zone drawing ---------------------------------------------------- */
+
   var drag = null;
   var box = svg.querySelector(".zone-box");
 

@@ -5,6 +5,7 @@ never silently disappear from it: the caveat, the attribution, and the promise
 that nothing is loaded from a third party.
 """
 
+import json
 import re
 
 import pytest
@@ -73,6 +74,37 @@ def test_a_theme_switch_is_offered(page):
     assert 'id="theme-toggle"' in page
     assert ':root[data-theme="dark"]' in page
     assert "localStorage" in page
+
+
+def test_the_commune_search_is_offered(page):
+    assert 'id="commune"' in page
+    assert '"communes":"communes.json"' in page.replace(" ", "")
+
+
+def test_the_commune_index_ships_beside_the_page(archive, tmp_path):  # noqa: F811
+    """35 000 communes are too heavy to inline, so the index is a separate file
+    on the same origin. If the copy step is ever dropped, search breaks silently
+    for every visitor."""
+    data_dir, database = archive
+    write_day(data_dir, "2026-07-29", range(24))
+    warehouse.build(str(data_dir), database)
+
+    out = tmp_path / "out"
+    web.build(database, str(out))
+
+    assert (out / "communes.json").is_file()
+
+
+def test_the_commune_index_is_ranked_by_population():
+    """The search returns the first matches it finds, in file order. That only
+    puts the right ones first because the file itself is sorted by population:
+    the ordering IS the ranking, which is why no score is stored."""
+    index = json.loads((web.HERE / "assets" / "communes.json").read_text(encoding="utf-8"))
+    noms = index["noms"].split("\n")
+
+    assert len(noms) > 30000
+    assert noms[0] == "Paris"
+    assert len(index["lon"]) == len(noms) == len(index["cp"].split("\n"))
 
 
 def test_the_caveat_is_present(page):

@@ -9,6 +9,7 @@ English. See docs/DECISIONS.md.
 """
 
 import os
+import shutil
 from datetime import datetime, timezone
 from html import escape
 from pathlib import Path
@@ -410,4 +411,12 @@ def build(database: str = DEFAULT_DATABASE, output_dir: str = DEFAULT_OUTPUT) ->
     os.makedirs(output_dir, exist_ok=True)
     path = os.path.join(output_dir, "index.html")
     Path(path).write_text(render(database), encoding="utf-8")
+
+    # The commune index ships beside the page rather than inside it: 35 000
+    # entries would triple the page weight for a feature most visitors never
+    # use. Same origin, so the page still depends on no third party.
+    communes = HERE / "assets" / "communes.json"
+    if communes.is_file():
+        shutil.copyfile(communes, os.path.join(output_dir, communes.name))
+
     return path

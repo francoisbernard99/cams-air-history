@@ -37,11 +37,21 @@ def figure(sites: list[dict], species: list[str], labels: dict[str, str]) -> str
         "yMax": proj["yMax"],
         "species": species,
         "labels": {key: labels.get(key, key) for key in species},
+        # Served from this same site, not a third party, and only fetched if the
+        # visitor actually searches. 35 000 communes weigh too much to inline.
+        "communes": "communes.json",
     }, ensure_ascii=False)
 
     return f"""
   <figure id="map-figure" class="map-figure" hidden>
     <figcaption class="map-controls">
+      <span class="map-search">
+        <label class="sr-only" for="commune">Rechercher une commune</label>
+        <input id="commune" type="search" autocomplete="off" role="combobox"
+               aria-expanded="false" aria-controls="commune-results"
+               placeholder="Commune ou code postal">
+        <ul id="commune-results" role="listbox" hidden></ul>
+      </span>
       <span class="map-modes" role="group" aria-label="Mode de sélection">
         <button type="button" data-mode="point" aria-pressed="true">Pointer</button>
         <button type="button" data-mode="zone" aria-pressed="false">Zone</button>

@@ -364,3 +364,55 @@ footer {
 .prose { max-width: 46rem; color: var(--text-secondary); }
 .prose ul { padding-left: 1.2rem; }
 .prose li { margin-bottom: 0.4rem; }
+
+/* ---- Commune search --------------------------------------------------- */
+
+.sr-only {
+  position: absolute;
+  width: 1px; height: 1px;
+  padding: 0; margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.map-search { position: relative; flex: 1 1 16rem; max-width: 24rem; }
+
+#commune {
+  width: 100%;
+  padding: 0.42rem 0.7rem;
+  background: var(--page);
+  color: var(--text-primary);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font: inherit;
+  font-size: 0.9rem;
+}
+
+#commune:focus { outline: 2px solid var(--series-1); outline-offset: 1px; }
+
+#commune-results {
+  position: absolute;
+  z-index: 5;
+  left: 0; right: 0; top: calc(100% + 4px);
+  margin: 0;
+  padding: 0.25rem;
+  list-style: none;
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12);
+  max-height: 17rem;
+  overflow-y: auto;
+}
+
+#commune-results li {
+  padding: 0.38rem 0.6rem;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+#commune-results li:hover,
+#commune-results li[aria-selected="true"] { background: var(--grid); }
+#commune-results li.empty { color: var(--text-muted); font-style: italic; cursor: default; }

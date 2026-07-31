@@ -162,8 +162,14 @@ see the section above on what this data is.
 
 ```bash
 python -m warehouse build --data-dir archive/data
-python -m web                       # writes public/index.html
+python -m web                        # writes public/index.html
+python -m http.server -d public 8000 # then open http://localhost:8000
 ```
+
+Opening `public/index.html` straight from disk mostly works — the map draws and
+a click still reaches Open-Meteo — but browsers refuse `fetch()` on a `file://`
+origin, so the commune search cannot load its index. Serve the folder and it
+behaves exactly as it does in production.
 
 One self-contained HTML file, rebuilt by the workflow after every successful
 collection and deployed to GitHub Pages. **No JavaScript, no charting library,
@@ -181,7 +187,11 @@ before any script could run and will still render years from now.
   median of its own species, since 80 µg/m³ of ozone is ordinary and the same
   figure in PM2.5 is not. Nothing is hard-coded.
 - Every chart ships a **table view**, so no value is reachable only by hovering.
-- Light and dark are two validated sets of steps, not an automatic inversion.
+- Light is the default theme; dark is a choice, remembered, and its steps were
+  validated against the dark surface rather than inverted.
+- **Search by commune or postcode** over all 34,969 French communes. The index
+  is served from the same origin and fetched only on the first keystroke —
+  inlining it would quadruple the page weight for a feature many never use.
 
 ## Tests
 

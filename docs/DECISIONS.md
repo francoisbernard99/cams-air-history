@@ -300,6 +300,39 @@ HTML parsed clean. Only rendering the page and looking at it found it.
 
 ---
 
+## 2026-07-31 — The commune index ships beside the page, not inside it
+
+**Context.** Clicking a map of the whole of France is too coarse to find a
+particular town, which is the first thing a visitor tries. Search needs the
+34,969 French communes with their coordinates.
+
+**Source.** `geo.api.gouv.fr` (Découpage administratif), Licence Ouverte, fetched
+once and vendored into `web/assets/`. Vendoring rather than calling it at build
+time keeps the build reproducible offline.
+
+**Decision.** The index is a separate file served from the same origin, fetched
+on the first keystroke and never before.
+
+**Why not inline it.** Even compacted it is 1.2 MB, about 420 KB over the wire.
+That would quadruple the page weight for a feature many visitors never use.
+Same-origin, so the page still depends on no third party — the promise was never
+"one file", it was "nothing fetched from anyone else".
+
+**How it was compacted, and what that cost.** 4.6 MB of raw JSON down to 1.2 MB:
+
+| Step | Rationale |
+|---|---|
+| Columns as parallel arrays, names as one newline-joined string | removes per-row JSON punctuation |
+| Coordinates rounded to 3 decimals (~110 m) | the model's own cell is 11 km wide; 110 m was already meaningless here |
+| Population dropped | rows are sorted by it, so the array order *is* the ranking |
+
+That last one is the useful trick: search scans in order and stops at eight
+matches, so the largest communes surface first with no score stored and no
+sorting at query time. A test pins the ordering, because search quality silently
+depends on it.
+
+---
+
 ## Still to decide
 
 - **Week 2** — where produced data lands: dedicated branch, run artifact, or
