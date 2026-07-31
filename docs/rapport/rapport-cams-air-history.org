@@ -1,0 +1,511 @@
+#+TITLE: Évaluer une donnée atmosphérique
+#+SUBTITLE: Construire une chaîne de bout en bout pour savoir ce qu'un modèle vaut — ingénierie des données et chimie de l'atmosphère
+#+AUTHOR: François BERNARD
+#+DATE: <2026-07-31 Fri>
+
+#+OPTIONS: toc:t num:t ^:{} H:3
+#+LATEX_COMPILER: xelatex
+#+LATEX_CLASS: article
+#+LATEX_CLASS_OPTIONS: [11pt,a4paper]
+
+#+LATEX_HEADER: \usepackage{fontspec}
+#+LATEX_HEADER: \setmainfont{Source Sans Pro Light}[
+#+LATEX_HEADER:   BoldFont = {Source Sans Pro},
+#+LATEX_HEADER:   ItalicFont = {Source Sans Pro Light Italic}]
+#+LATEX_HEADER: \setsansfont{Source Sans Pro Light}
+#+LATEX_HEADER: \setmonofont{DejaVu Sans Mono}[Scale=0.82]
+#+LATEX_HEADER: \usepackage[french]{babel}
+#+LATEX_HEADER: \frenchsetup{StandardLists=true}
+#+LATEX_HEADER: \usepackage{microtype}
+#+LATEX_HEADER: \setlength{\emergencystretch}{1em}
+
+# Les indices et symboles qui reviennent en chimie atmosphérique.
+#+LATEX_HEADER: \usepackage{newunicodechar}
+#+LATEX_HEADER: \newunicodechar{₂}{\textsubscript{2}}
+#+LATEX_HEADER: \newunicodechar{₃}{\textsubscript{3}}
+#+LATEX_HEADER: \newunicodechar{₄}{\textsubscript{4}}
+#+LATEX_HEADER: \newunicodechar{₅}{\textsubscript{5}}
+#+LATEX_HEADER: \newunicodechar{³}{\textsuperscript{3}}
+#+LATEX_HEADER: \newunicodechar{µ}{\ensuremath{\mu}}
+#+LATEX_HEADER: \newunicodechar{μ}{\ensuremath{\mu}}
+#+LATEX_HEADER: \newunicodechar{×}{\ensuremath{\times}}
+#+LATEX_HEADER: \newunicodechar{→}{\ensuremath{\rightarrow}}
+#+LATEX_HEADER: \newunicodechar{≥}{\ensuremath{\geq}}
+#+LATEX_HEADER: \newunicodechar{ᵉ}{\textsuperscript{e}}
+#+LATEX_HEADER: \newunicodechar{—}{---}
+
+#+LATEX_HEADER: \usepackage[top=2.4cm,bottom=2.2cm,left=2.4cm,right=2.4cm,footskip=1.2cm]{geometry}
+#+LATEX_HEADER: \usepackage{longtable,booktabs,tabularx}
+#+LATEX_HEADER: \newcolumntype{Y}{>{\raggedright\arraybackslash}X}
+#+LATEX_HEADER: \usepackage{parskip}
+#+LATEX_HEADER: \setlength{\parskip}{0.35em}
+#+LATEX_HEADER: \usepackage{xcolor}
+#+LATEX_HEADER: \usepackage{enumitem}
+#+LATEX_HEADER: \setlist[itemize]{topsep=2pt, partopsep=0pt, parsep=0pt, itemsep=2pt, leftmargin=1.4em}
+
+#+LATEX_HEADER: \definecolor{navy}{HTML}{000066}
+#+LATEX_HEADER: \usepackage{titlesec}
+#+LATEX_HEADER: \titleformat{\section}{\Large\color{navy}\scshape}{\thesection\enspace}{0pt}{}[{\color{black}\titlerule[0.4pt]}]
+#+LATEX_HEADER: \titleformat{\subsection}{\large\color{navy}\bfseries}{\thesubsection\enspace}{0pt}{}
+#+LATEX_HEADER: \titlespacing*{\section}{0pt}{1.6em}{0.8em}
+
+# Encadré pour les mises en garde scientifiques et les pièges techniques.
+#+LATEX_HEADER: \usepackage[most]{tcolorbox}
+#+LATEX_HEADER: \newtcolorbox{apoint}[1]{colback=navy!4, colframe=navy!55, boxrule=0.4pt, arc=2pt, left=8pt, right=8pt, top=6pt, bottom=6pt, title={\small\scshape #1}, fonttitle=\color{navy}}
+
+# Encadré de fin de partie : ce que j'ai appris, séparé du contenu technique.
+#+LATEX_HEADER: \definecolor{ocre}{HTML}{7A4B00}
+#+LATEX_HEADER: \newtcolorbox{aretenir}{colback=ocre!5, colframe=ocre!45, boxrule=0.4pt, arc=2pt, left=8pt, right=8pt, top=6pt, bottom=6pt, title={\small\scshape Ce que j'en retiens}, fonttitle=\color{ocre}}
+
+# Code source. Nécessite, une seule fois dans votre configuration Emacs :
+#   (setq org-latex-src-block-backend 'listings)
+# Sans cette ligne, les blocs s'exportent en verbatim : lisible, mais sans
+# couleur ni retour à la ligne automatique.
+#+LATEX_HEADER: \usepackage{listings}
+#+LATEX_HEADER: \definecolor{codebg}{HTML}{F6F6F4}
+#+LATEX_HEADER: \lstset{basicstyle=\ttfamily\footnotesize, backgroundcolor=\color{codebg}, frame=single, rulecolor=\color{gray!35}, breaklines=true, breakatwhitespace=true, showstringspaces=false, keywordstyle=\color{navy}\bfseries, commentstyle=\color{gray!80}\itshape, xleftmargin=6pt, xrightmargin=6pt, framesep=5pt, aboveskip=8pt, belowskip=8pt, columns=fullflexible}
+
+#+LATEX_HEADER: \usepackage{fontawesome5}
+#+LATEX_HEADER: \usepackage{fancyhdr}
+#+LATEX_HEADER: \pagestyle{fancy}
+#+LATEX_HEADER: \fancyhf{}
+#+LATEX_HEADER: \fancyhead[L]{\footnotesize\itshape Chaîne de données atmosphériques}
+#+LATEX_HEADER: \fancyhead[R]{\footnotesize\itshape François BERNARD}
+#+LATEX_HEADER: \fancyfoot[C]{\thepage}
+#+LATEX_HEADER: \renewcommand{\headrulewidth}{0.4pt}
+
+#+LATEX_HEADER: \usepackage{hyperref}
+#+LATEX_HEADER: \hypersetup{colorlinks=true, linkcolor=navy, urlcolor=navy, citecolor=navy}
+
+#+BEGIN_QUOTE
+Un modèle de qualité de l'air annonce une concentration pour n'importe quel point
+du territoire. Que vaut ce chiffre ? Y répondre demande une chaîne complète :
+collecter tous les jours, archiver sans perdre ni inventer, interroger, puis
+confronter à la mesure. Ce document décrit cette chaîne sur les deux plans qu'elle
+mobilise — l'ingénierie des données et la chimie de l'atmosphère — et rend compte
+des évaluations menées à chaque étape, y compris de celles qui ont conclu que
+j'avais tort.
+#+END_QUOTE
+
+#+INCLUDE: "chiffres-partages.org::*Connexion à l'entrepôt" :only-contents t
+
+* @@latex:\faCompass\enspace@@ Introduction
+
+** Le projet en une page
+
+# À ÉCRIRE. Points à couvrir, dans cet ordre :
+#  - ce que fait le service, en trois phrases, sans jargon
+#  - l'adresse publique et l'adresse du dépôt
+#  - la contrainte de départ : aucune clé d'API, aucun serveur, aucun budget
+#  - ce que le document raconte : deux plans, ingénierie et chimie, et pourquoi
+#    ils ne sont pas séparables ici
+
+Chaque matin, un programme interroge le service européen CAMS, archive ce qu'il
+reçoit, et republie une page à jour. Aucune clé d'accès, aucun serveur, aucun
+budget de fonctionnement. Le dépôt se clone et s'exécute en trois commandes.
+
+#+CAPTION: Ce que contient l'archive à la date de rédaction.
+#+ATTR_LATEX: :environment tabularx :width \linewidth :align lllllY
+#+INCLUDE: "chiffres-partages.org::*Étendue de l'archive" :only-contents t
+
+** Le fil directeur : évaluer
+
+Ce document n'est pas un journal de développement rangé dans l'ordre où les
+choses ont été faites. Il est organisé autour d'une seule activité, déclinée à
+quatre niveaux :
+
+| Niveau                | Question posée                                        |
+|-----------------------+-------------------------------------------------------|
+| Une source de données | peut-on s'y fier, et pour combien de temps ?          |
+| Une chaîne technique  | que se passe-t-il quand elle casse, et le sait-on ?   |
+| Un modèle             | s'écarte-t-il de la mesure, où, quand, de combien ?   |
+| Sa propre méthode     | l'indicateur choisi répond-il à la question posée ?   |
+
+Les trois premiers niveaux sont attendus. Le quatrième l'est moins, et c'est
+pourtant celui qui distingue une évaluation d'une mesure : *l'instrument avec
+lequel on juge doit lui-même être jugé*. La partie III y est consacrée
+entièrement, et rapporte un cas où mon propre indicateur donnait une réponse
+fausse tout en paraissant raisonnable.
+
+** Pourquoi deux plans dans un seul document
+
+# À ÉCRIRE. L'argument central, à défendre explicitement :
+#  - un mémo d'ingénierie seul : des milliers de gens peuvent l'écrire
+#  - une note de chimie seule : pas d'application
+#  - ensemble : quelqu'un qui sait à la fois pourquoi le code écrit un fichier
+#    par jour ET pourquoi une station de trafic n'est pas comparable à une
+#    maille de 11 km
+#
+# Formuler l'argument en termes d'évaluation, c'est plus juste : on ne peut pas
+# évaluer un modèle atmosphérique sans savoir construire la chaîne qui produit
+# la comparaison, ni sans savoir ce qu'une station mesure réellement. Les deux
+# compétences ne sont pas juxtaposées, elles sont l'une la condition de l'autre.
+
+** Comment lire ce document
+
+# À ÉCRIRE. Une phrase par partie.
+#
+# Signaler explicitement les deux niveaux de lecture :
+#  - un lecteur qui vient pour la qualité de l'air peut lire la partie II seule
+#  - un lecteur qui vient pour l'ingénierie peut lire la partie I seule
+#  - la partie III (les erreurs) est celle qui apprend le plus aux deux
+#
+# Les termes techniques d'ingénierie utilisés dans la partie I sont définis dans
+# le glossaire en annexe, à l'usage du lecteur venu de la chimie.
+
+* @@latex:\faServer\enspace@@ Partie I — Une chaîne dont on peut répondre
+
+# Évaluer un modèle suppose d'abord une chaîne de données dont on sait ce
+# qu'elle fait quand elle va mal. Cette partie décrit la construction de cette
+# chaîne, en expliquant chaque choix et ce qu'il coûte.
+
+** Choisir une source qui ne meurt pas
+
+# À ÉCRIRE. Le raisonnement, pas seulement la conclusion :
+#  - le critère décisif : sans clé et sans quota, sinon le projet meurt le jour
+#    où le quota tombe
+#  - ce qui a été vérifié en direct plutôt que lu dans la documentation
+#    (600/min, 5 000/h, 10 000/jour, archive jusqu'à 2013, CC-BY non commercial)
+#  - la leçon générale : vérifier une source, c'est l'appeler, pas la lire
+
+** Collecter sans dépendances
+
+# À ÉCRIRE. Le choix de la bibliothèque standard :
+#  - ce que ça coûte : gestion HTTP à la main, quelques lignes de plus
+#  - ce que ça rapporte : aucune étape d'installation en intégration continue,
+#    donc rien qui casse quand une version change
+#  - la distinction utile : collecteur à zéro dépendance / entrepôt à une seule.
+#    Ce qui doit tourner seul tous les matins ne peut pas dépendre d'une mise à
+#    jour de bibliothèque ; la partie analyse le peut.
+#  - montrer le squelette de `collector/api.py` : réessais, attente croissante,
+#    distinction 4xx (inutile de réessayer) / 429 et 5xx (réessayer)
+
+** Ce qui se passe quand ça casse
+
+Cette section porte l'essentiel de la crédibilité technique du projet. Un
+collecteur automatisé n'est pas jugé sur ce qu'il fait un bon jour.
+
+*** Une panne n'est pas un bug
+
+Le collecteur distingue trois issues, et les fait remonter par son code de
+sortie, parce que c'est ce que l'automatisation sait lire :
+
+| Code | Sens                        | Exécution                            |
+|------+-----------------------------+--------------------------------------|
+|    0 | collecte réussie            | verte                                |
+|    1 | échec inattendu, un bug     | rouge, il faut un humain             |
+|    2 | source indisponible         | verte avec avertissement, se répare  |
+
+Le raisonnement tient en une phrase : faire passer au rouge la panne d'un
+service tiers entraîne le lecteur à ignorer le rouge. Or le rouge doit continuer
+à signifier « quelque chose est cassé et je peux le réparer ». Une panne de la
+source n'entre pas dans cette catégorie — elle est prévisible, elle se répare
+seule, et elle mérite un avertissement, pas une alarme.
+
+*** L'auto-réparation coûte un appel, pas une machinerie
+
+La collecte planifiée ne demande pas la journée écoulée : elle demande une
+fenêtre de sept jours. Une panne survenue hier est donc rattrapée ce matin, sans
+que personne n'intervienne et sans code dédié à la reprise.
+
+Ce qui rend cela possible n'est pas la fenêtre, c'est le format de stockage :
+*un fichier par journée calendaire, quelle que soit la plage demandée*.
+Redemander une fenêtre réécrit les journées qu'elle couvre au lieu d'y ajouter
+des lignes. L'idempotence n'est pas une fonctionnalité écrite à part, elle
+découle du choix de nommage.
+
+#+BEGIN_apoint{Le piège de l'écriture interrompue}
+La collecte tourne sans surveillance. Une interruption au milieu d'une écriture
+laisserait un fichier tronqué, que la lecture suivante prendrait pour un fichier
+complet — une erreur silencieuse, donc la pire espèce. L'écriture passe par un
+fichier temporaire renommé à la fin : le renommage étant atomique sur un même
+système de fichiers, le fichier final n'existe que complet.
+#+END_apoint
+
+*** Consigner, sinon la panne est invisible
+
+# À ÉCRIRE. Le journal `runs.jsonl` :
+#  - le paradoxe : une exécution qui passe au vert *parce qu'elle a bien géré
+#    une panne* cache le trou qu'elle vient de laisser
+#  - format JSON Lines : ajout seul, jamais de fichier à moitié écrit, et
+#    DuckDB le lit directement
+#  - ce que le journal permet ensuite : la requête `archive-health`, censée ne
+#    rien renvoyer
+
+** Stocker : un fichier par jour, et une branche à part
+
+# À ÉCRIRE.
+#  - pourquoi les données ne sont pas sur `main` : une branche `data` dédiée
+#    garde l'historique du code lisible (un commit par changement de code, pas
+#    un par jour de données)
+#  - ce qui invalidera ce choix : environ 18 Mo par an aujourd'hui ; une grille
+#    nationale multiplierait ça par un facteur que ce choix n'absorbera pas
+#  - la notion de décision datée, avec sa condition de péremption
+
+** Interroger : DuckDB et les fonctions de fenêtre
+
+# À ÉCRIRE. Une question = un fichier .sql relisible. Montrer et expliquer :
+#  - RANK() OVER (PARTITION BY species ...) : pourquoi classer à l'intérieur de
+#    chaque espèce et jamais entre espèces
+#  - LAG() OVER (PARTITION BY site, species ORDER BY day) : pourquoi le
+#    partitionnement empêche Paris de lire la valeur de Bordeaux comme sa veille
+#  - « gaps and islands » pour la durée d'un épisode : la clé construite sur les
+#    horodatages réels, donc une heure manquante coupe l'épisode en deux — ce
+#    qui est le comportement correct, pas une limitation
+
+#+BEGIN_apoint{La qualité des données s'écrit dans le SQL, pas dans la notice}
+Les classements excluent les journées incomplètes (=WHERE hours = 24=). Six
+heures moyennées contre vingt-quatre produisent un artefact qui se classerait
+comme un record. Un avertissement en prose se lit une fois ; une clause =WHERE=
+tient à chaque exécution, y compris chez celui qui recopie la requête.
+#+END_apoint
+
+** Restituer : une page qui ne dépend de personne
+
+# À ÉCRIRE.
+#  - le choix du statique contre Streamlit : une page de portfolio est jugée par
+#    un inconnu qui clique dans six mois ; une application sur offre gratuite
+#    s'endort, un CDN confie la durée de vie du site à un tiers
+#  - les graphiques en SVG écrits par Python : aucune bibliothèque
+#  - la carte : contour embarqué, projection Mercator choisie parce que son
+#    inverse tient en trois lignes — le navigateur doit retransformer un clic en
+#    coordonnées, et cela doit être exact
+#  - l'appel direct depuis le navigateur du visiteur : chaque visiteur consomme
+#    son propre quota, donc le site passe à l'échelle sans rien coûter
+
+** Tester : ce qu'on teste, et ce qu'on ne teste pas
+
+# À ÉCRIRE.
+#  - aucun test n'appelle le réseau : un test qui dépend d'Internet échoue le
+#    jour où la source tombe, et on finit par ne plus croire ses propres tests
+#  - les tests qui comptent ici : faire tomber la source exprès et vérifier
+#    qu'aucun fichier existant n'est effacé ni tronqué
+#  - le test le plus inhabituel : vérifier que la mise en garde scientifique est
+#    présente dans la page. Sa disparition silencieuse transformerait le site en
+#    quelque chose de malhonnête ; cela mérite un test, pas de la confiance
+
+#+BEGIN_aretenir
+# À ÉCRIRE, en fin de rédaction de la partie I. Les notions d'ingénierie que ce
+# projet m'a fait acquérir, formulées avec mes mots plutôt qu'avec le
+# vocabulaire du métier :
+#  - idempotence — rejouer la même opération ne change rien de plus
+#  - écriture atomique — tout ou rien, jamais un état intermédiaire lisible
+#  - dégradation gracieuse — tomber proprement plutôt que ne jamais tomber
+#  - intégration continue — la machine vérifie, pas moi
+#  - orchestration — ce qui déclenche quoi, et dans quel ordre
+#
+# Et le parallèle avec ce que je connais déjà : ces notions ont toutes un
+# équivalent en métrologie. L'écriture atomique est une mesure qu'on ne consigne
+# qu'une fois terminée ; la dégradation gracieuse est un instrument qui signale
+# sa perte d'étalonnage au lieu de continuer à afficher un nombre. Ce n'est pas
+# un domaine étranger, c'est le même souci de traçabilité appliqué au logiciel.
+#+END_aretenir
+
+* @@latex:\faCloud\enspace@@ Partie II — Ce que vaut le chiffre
+
+** Ce qu'est CAMS, et ce que « modèle » veut dire ici
+
+# À ÉCRIRE. Le socle scientifique du document :
+#  - service Copernicus, assimilation de données, distinction analyse / prévision
+#  - ce qu'est un modèle de chimie-transport : émissions, transport, chimie,
+#    dépôt ; ce que le modèle calcule et ce qu'il ne mesure pas
+#  - résolution : 0,1° soit environ 11 km pour l'ensemble européen
+#  - conséquence directe : une valeur affichée pour Paris à 14 h n'a pas été
+#    mesurée à Paris à 14 h
+
+#+BEGIN_apoint{La phrase qui gouverne tout le projet}
+Ce ne sont pas des mesures. CAMS assimile des observations satellite et des
+stations au sol, mais ce qu'il renvoie est un champ calculé, sur une maille
+d'environ 11 kilomètres de côté. Le site l'écrit avant le premier graphique, et
+un test automatique vérifie que la phrase y est toujours.
+#+END_apoint
+
+** Les six espèces suivies
+
+# À ÉCRIRE. Pour chacune : origine, durée de vie, ce qu'elle indique, et ce que
+# le modèle en fait de bien ou de mal.
+#  - PM2,5 et PM10 : primaires et secondaires, combustion, remise en suspension
+#  - NO₂ : traceur de combustion locale, très courte échelle spatiale — donc le
+#    plus mal représenté par une maille de 11 km, argument à développer
+#  - O₃ : secondaire, photochimique, échelle régionale — donc le mieux
+#    représenté ; expliquer pourquoi
+#  - SO₂ : industriel et maritime, très faible niveau de fond en France
+#  - CO : traceur de combustion incomplète, longue durée de vie
+#
+# Mentionner que l'API en expose douze autres, dont formaldéhyde, glyoxal,
+# nitrates de peroxyacyle et COV non méthaniques — de la chimie atmosphérique,
+# pas des indices de qualité de l'air.
+
+** Modèle et mesure : deux objets différents
+
+# À ÉCRIRE. Le cœur scientifique.
+#  - ce que mesure une station : un point, une prise d'air à une hauteur donnée,
+#    à une distance donnée de la chaussée
+#  - ce que calcule une maille : une moyenne de volume
+#  - pourquoi les comparer directement est un abus, et à quelles conditions la
+#    comparaison redevient légitime
+
+** La représentativité spatiale, ou pourquoi le tri des stations est le vrai travail
+
+# À ÉCRIRE. L'argument que seul un chimiste de l'atmosphère apporte.
+#  - typologie européenne : fond / trafic / industriel, croisée avec
+#    urbain / périurbain / rural
+#  - une station de trafic mesure un microenvironnement que le modèle ne prétend
+#    pas décrire : le désaccord y est attendu, et l'interpréter comme une erreur
+#    du modèle serait une faute
+#  - conséquence : la comparaison honnête se fait sur les stations de fond, et
+#    le choix des stations détermine le résultat plus que la statistique employée
+#  - ce qu'un développeur ferait à la place : tout télécharger et calculer une
+#    corrélation globale, qui ne voudrait rien dire
+
+** Un cas concret : Bordeaux, le 26 juillet 2026
+
+L'archive a désigné cette journée sans qu'on la lui indique. Le tableau ci-dessous
+donne les cinq écarts les plus forts de toute l'archive, toutes espèces confondues.
+
+#+CAPTION: Les écarts les plus forts à la normale. Chaque journée est ramenée à l'échelle de sa propre espèce.
+#+ATTR_LATEX: :environment tabularx :width \linewidth :align YllrrY
+#+INCLUDE: "chiffres-partages.org::*Les écarts les plus forts à la normale" :only-contents t
+
+# À ÉCRIRE. Le raisonnement complet, étape par étape :
+#  1. trois espèces indépendantes désignent la même journée au même endroit —
+#     c'est une corroboration, pas une répétition
+#  2. la signature : PM et CO élevés, NO₂ discret. Le trafic ferait monter le
+#     NO₂ bien davantage relativement au CO. Profil de combustion de biomasse
+#  3. la saison : les autres records de l'archive sont hivernaux (chauffage,
+#     inversions thermiques). Un pic estival est anormal
+#  4. la réserve : CAMS assimile des inventaires d'émissions d'incendies, donc
+#     on voit peut-être l'entrée du modèle et non une observation indépendante
+#  5. ce qui trancherait : les foyers FIRMS, et la mesure au sol ci-dessous
+
+*** Ce que dit la mesure au sol
+
+#+CAPTION: Station FR31002 (fond urbain, 4,5 km du point CAMS) contre le modèle.
+#+ATTR_LATEX: :environment tabular :align lrrrrrr
+#+INCLUDE: "chiffres-partages.org::*Modèle contre mesure au sol, épisode de Bordeaux" :only-contents t
+
+# À ÉCRIRE. Les trois lectures :
+#  - l'épisode est réel, confirmé par une mesure indépendante
+#  - un jour ordinaire, le modèle est excellent (biais quasi nul le 27)
+#  - pendant l'épisode il sous-estime lourdement et se décale d'une journée :
+#    comportement attendu d'une maille de 11 km face à un panache — lissage de
+#    l'intensité, erreur de calage temporel, fond juste
+#  - réserves : données non encore validées par l'AASQA, une station, trois jours
+
+** Valider un modèle contre un réseau de stations
+
+# À ÉCRIRE. La méthode, telle qu'elle serait menée proprement :
+#  - appariement spatial et temporel
+#  - indicateurs : coefficient de corrélation, R², erreur quadratique moyenne,
+#    biais moyen ; ce que chacun dit et ce qu'il cache
+#  - stratification par typologie de station et par saison
+#  - traitement des valeurs invalides : les lignes non valides portent des
+#    valeurs sentinelles négatives, filtrer est obligatoire
+#  - ce qu'on peut conclure, et ce qu'on ne peut pas
+
+#+BEGIN_aretenir
+# À ÉCRIRE en fin de partie II. Ce que ce projet m'a appris sur un terrain que
+# je croyais connaître :
+#  - un modèle de chimie-transport vu depuis sa sortie plutôt que depuis ses
+#    paramètres d'entrée, ce qui est l'inverse de mon habitude de laboratoire
+#  - la représentativité spatiale comme grandeur à part entière, et non comme
+#    précaution de rédaction
+#  - ce qu'un écart modèle-mesure permet réellement de conclure, et à partir de
+#    combien de stations et de jours
+#+END_aretenir
+
+* @@latex:\faExclamationTriangle\enspace@@ Partie III — Évaluer sa propre méthode
+
+Un instrument de mesure se caractérise avant de servir. Un indicateur statistique
+devrait suivre la même règle, et ne la suit presque jamais : on le choisit parce
+qu'il paraît raisonnable, on l'applique, et on lit le résultat sans avoir vérifié
+qu'il répond à la question posée.
+
+Cette partie rend compte de quatre erreurs commises pendant le projet, dont une
+de ce type exactement. Elle est la plus instructive du document, et la plus rare
+dans un rapport de projet — un texte qui ne montre que les bonnes décisions
+n'apprend rien et se lit comme une plaquette commerciale.
+
+** Un indicateur d'anomalie faux, et comment il a été démasqué
+
+# À ÉCRIRE.
+#  - première version : rapport de la journée à la médiane de son espèce
+#  - ce qu'elle renvoyait : le dioxyde de soufre à 17 µg/m³ (médiane 1,2, donc
+#    un rapport de 14) devant les PM2,5 à 83 µg/m³
+#  - le défaut : l'indicateur récompensait les espèces à faible niveau de fond,
+#    pas les épisodes qui comptent
+#  - la correction : écart ramené à la distance entre journée médiane et
+#    journée déjà chargée
+#  - la leçon : comparer les deux formules sur les données réelles, pas dans
+#    l'abstrait, est ce qui a révélé le problème
+
+** Un plantage sur une archive neuve
+
+# À ÉCRIRE. Le diviseur nul quand une espèce ne varie pas — c'est-à-dire le
+# premier jour d'un utilisateur qui clone le dépôt. Comment un test de
+# non-régression a été ajouté et ce qu'il vérifie.
+
+** Un défaut d'affichage qu'aucune vérification automatique n'a vu
+
+# À ÉCRIRE. Les étiquettes d'axe coupées au bord du cadre. Le validateur de
+# palette regarde les couleurs, les tests regardent le contenu, le HTML était
+# valide. Il a fallu regarder la page. La leçon sur les limites des tests.
+
+** Deviner au lieu de lire
+
+# À ÉCRIRE. Les noms de conteneurs de stockage inventés au lieu d'utiliser les
+# adresses renvoyées par l'API, et la jointure où un suffixe était dupliqué.
+# Deux essais perdus. Petite leçon, mais elle revient tout le temps.
+
+* @@latex:\faBalanceScale\enspace@@ Partie IV — Limites, et ce que le projet ne dit pas
+
+# À ÉCRIRE.
+#  - cinq points de grille ne sont pas la France : la couverture nationale se
+#    heurte au quota d'appels quotidien, problème non résolu à ce stade
+#  - l'archive commence en 2024, alors que la source remonte à 2013 : le format
+#    « un fichier par jour » devient mauvais à cette échelle, un stockage froid
+#    en Parquet annuel serait nécessaire
+#  - aucune validation systématique n'a encore été menée : une station et trois
+#    jours sont une preuve de faisabilité, pas une étude
+#  - le site ne dit rien de l'exposition individuelle et ne le prétend pas
+
+* @@latex:\faTools\enspace@@ Reproduire
+
+# À ÉCRIRE. Les commandes exactes, dans l'ordre, telles qu'un lecteur peut les
+# taper. Insister sur le fait qu'aucune clé n'est nécessaire.
+
+#+BEGIN_SRC sh
+git clone https://github.com/francoisbernard99/cams-air-history
+cd cams-air-history
+python -m collector                  # une collecte, sans configuration
+#+END_SRC
+
+* @@latex:\faLanguage\enspace@@ Glossaire
+
+# À COMPLÉTER au fil de la rédaction. Deux colonnes volontairement : le terme
+# d'ingénierie, et son équivalent ou son analogue dans le vocabulaire de la
+# mesure. C'est ce qui rend le document lisible par les deux publics — et c'est
+# aussi la meilleure façon de retenir ces notions.
+
+| Terme                     | Ce que ça veut dire                                                        |
+|---------------------------+----------------------------------------------------------------------------|
+| Idempotence               | Rejouer la même opération ne produit rien de plus que la première fois.     |
+| Écriture atomique         | Tout ou rien : le fichier final n'existe que complet, jamais à moitié écrit. |
+| Dégradation gracieuse     | Tomber proprement, en conservant l'état valide précédent et en le signalant. |
+| Intégration continue      | Des vérifications exécutées par la machine à chaque modification du code.   |
+| Orchestration             | La description de ce qui déclenche quoi, quand, et dans quel ordre.         |
+| Format long               | Une ligne par observation élémentaire, plutôt qu'une colonne par grandeur.  |
+| Fonction de fenêtre       | Calcul sur un groupe de lignes voisines sans les fusionner en une seule.    |
+| Artefact dérivé           | Fichier reconstruit à la demande, jamais versionné, car reproductible.      |
+| Assimilation de données   | Correction d'un modèle par les observations disponibles au fil du temps.    |
+| Représentativité spatiale | L'étendue réelle sur laquelle une valeur mesurée ou calculée fait sens.     |
+
+* @@latex:\faBook\enspace@@ Sources, licences et attributions
+
+# À ÉCRIRE. À citer précisément :
+#  - CAMS (Copernicus Atmosphere Monitoring Service), distribué par Open-Meteo
+#    sous licence CC-BY 4.0, usage non commercial
+#  - Agence européenne pour l'environnement, service de téléchargement des
+#    mesures de stations
+#  - Fond de carte dérivé d'Admin Express (IGN), Licence Ouverte
+#  - Code du projet sous licence MIT

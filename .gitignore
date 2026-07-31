@@ -33,3 +33,14 @@ venv/
 *~
 \#*\#
 .\#*
+
+# Artefacts de compilation LaTeX (les .org sont la source)
+docs/rapport/*.tex
+docs/rapport/*.pdf
+docs/rapport/*.aux
+docs/rapport/*.log
+docs/rapport/*.out
+docs/rapport/*.toc
+docs/rapport/*.nav
+docs/rapport/*.snm
+docs/rapport/*.vrb

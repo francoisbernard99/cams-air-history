@@ -1,0 +1,163 @@
+#+TITLE: Évaluer une donnée atmosphérique
+#+SUBTITLE: Du satellite à la page publiée, et retour à la mesure
+#+AUTHOR: François BERNARD
+#+DATE: <2026-07-31 Fri>
+
+# Les titres de niveau 1 deviennent des sections, ceux de niveau 2 des diapositives.
+#+OPTIONS: toc:nil num:nil ^:{} H:2
+#+LATEX_COMPILER: xelatex
+#+LATEX_CLASS: beamer
+#+LATEX_CLASS_OPTIONS: [aspectratio=169,11pt]
+#+BEAMER_THEME: default
+#+COLUMNS: %45ITEM %10BEAMER_env(Env) %10BEAMER_act(Act) %4BEAMER_col(Col)
+
+#+LATEX_HEADER: \usepackage{fontspec}
+#+LATEX_HEADER: \setmainfont{Source Sans Pro Light}[
+#+LATEX_HEADER:   BoldFont = {Source Sans Pro},
+#+LATEX_HEADER:   ItalicFont = {Source Sans Pro Light Italic}]
+#+LATEX_HEADER: \setsansfont{Source Sans Pro Light}[BoldFont = {Source Sans Pro}]
+#+LATEX_HEADER: \setmonofont{DejaVu Sans Mono}[Scale=0.78]
+#+LATEX_HEADER: \usepackage[french]{babel}
+
+#+LATEX_HEADER: \usepackage{newunicodechar}
+#+LATEX_HEADER: \newunicodechar{₂}{\textsubscript{2}}
+#+LATEX_HEADER: \newunicodechar{₃}{\textsubscript{3}}
+#+LATEX_HEADER: \newunicodechar{₅}{\textsubscript{5}}
+#+LATEX_HEADER: \newunicodechar{³}{\textsuperscript{3}}
+#+LATEX_HEADER: \newunicodechar{µ}{\ensuremath{\mu}}
+#+LATEX_HEADER: \newunicodechar{μ}{\ensuremath{\mu}}
+#+LATEX_HEADER: \newunicodechar{×}{\ensuremath{\times}}
+#+LATEX_HEADER: \newunicodechar{—}{---}
+
+# Habillage sobre, dans les couleurs du CV et du rapport.
+#+LATEX_HEADER: \definecolor{navy}{HTML}{000066}
+#+LATEX_HEADER: \setbeamercolor{structure}{fg=navy}
+#+LATEX_HEADER: \setbeamercolor{frametitle}{fg=navy, bg=white}
+#+LATEX_HEADER: \setbeamerfont{frametitle}{series=\bfseries, size=\large}
+#+LATEX_HEADER: \setbeamertemplate{navigation symbols}{}
+#+LATEX_HEADER: \setbeamertemplate{itemize items}[circle]
+#+LATEX_HEADER: \setbeamertemplate{footline}{\hfill\scriptsize\color{gray}\insertframenumber\ \hspace{1em}\vspace{0.4em}}
+#+LATEX_HEADER: \usepackage{booktabs}
+
+# Nécessaire dès qu'un bloc de code apparaît, puisque la configuration Emacs
+# exporte le code via listings. Sans ce paquet : « Environment lstlisting
+# undefined ».
+#+LATEX_HEADER: \usepackage{listings}
+#+LATEX_HEADER: \lstset{basicstyle=\ttfamily\scriptsize, breaklines=true, showstringspaces=false, columns=fullflexible}
+#+LATEX_HEADER: \setbeamercolor{block title}{fg=white, bg=navy}
+#+LATEX_HEADER: \setbeamercolor{block body}{bg=navy!6}
+
+#+INCLUDE: "chiffres-partages.org::*Connexion à l'entrepôt" :only-contents t
+
+* La question
+
+** Un chiffre sans garantie
+
+# À ÉCRIRE. Trois lignes maximum. L'accroche :
+#  - un modèle annonce une concentration pour n'importe quel point du territoire
+#  - personne ne dit ce que ce chiffre vaut à cet endroit-là
+#  - y répondre demande une chaîne complète, pas une analyse ponctuelle
+
+** Ce que j'ai construit
+
+# À ÉCRIRE. Une diapositive, quatre éléments, pas plus.
+#  collecte quotidienne → archive → entrepôt SQL → carte publiée
+# Mettre l'adresse du site. Une capture d'écran de la carte vaut mieux qu'une liste.
+
+#+ATTR_LATEX: :width \linewidth
+# [[file:figures/carte.png]]
+
+** L'étendue de l'archive
+
+#+ATTR_LATEX: :environment tabular :align llllll
+#+INCLUDE: "chiffres-partages.org::*Étendue de l'archive" :only-contents t
+
+* Évaluer une source avant de s'y fier
+
+** Le critère qui décide de tout
+
+# À ÉCRIRE. Sans clé et sans quota, sinon le projet meurt le jour où le quota
+# tombe. Montrer les chiffres vérifiés en direct, pas lus dans la documentation.
+
+** Vérifier, ce n'est pas lire la documentation
+
+# À ÉCRIRE. Une diapositive sur la méthode : appeler l'API, mesurer, compter.
+# C'est transposable à n'importe quelle évaluation d'instrument.
+
+* Évaluer une chaîne technique
+
+** Ce qui se passe quand la source tombe
+
+#+ATTR_LATEX: :environment tabular :align clp{6cm}
+| Code | Sens                    | Exécution                       |
+|------+-------------------------+---------------------------------|
+|    0 | collecte réussie        | verte                           |
+|    1 | échec inattendu, un bug | rouge, il faut un humain        |
+|    2 | source indisponible     | verte, avertie, se répare seule |
+
+# À DIRE : faire passer au rouge la panne d'un tiers entraîne à ignorer le rouge.
+
+** Une panne invisible est pire qu'une panne
+
+# À ÉCRIRE. Le journal des collectes, et la requête censée ne rien renvoyer.
+
+* Évaluer un modèle
+
+** Ce que CAMS est, et n'est pas
+
+# À ÉCRIRE. Modèle, assimilation, maille de 11 km. Une seule idée par ligne.
+# C'est la diapositive la plus importante de la présentation.
+
+** L'archive désigne son propre épisode
+
+#+ATTR_LATEX: :environment tabular :align llllrr :font \small
+#+INCLUDE: "chiffres-partages.org::*Les écarts les plus forts à la normale" :only-contents t
+
+# À DIRE : trois espèces indépendantes, la même journée, le même endroit.
+# C'est une corroboration, pas une répétition.
+
+** Confronter à la mesure
+
+#+ATTR_LATEX: :environment tabular :align lrrrrrr :font \small
+#+INCLUDE: "chiffres-partages.org::*Modèle contre mesure au sol, épisode de Bordeaux" :only-contents t
+
+# À DIRE, dans cet ordre :
+#  - l'épisode est réel, une mesure indépendante le confirme
+#  - un jour ordinaire, le modèle est excellent
+#  - pendant l'épisode il sous-estime et se décale d'un jour
+#  - c'est le comportement attendu d'une maille de 11 km face à un panache
+
+** Le tri des stations est le vrai travail
+
+# À ÉCRIRE. Une station de trafic mesure ce que le modèle ne prétend pas
+# décrire. Le choix des stations pèse plus que le choix de la statistique.
+
+* Évaluer sa propre méthode
+
+** Un indicateur qui paraissait raisonnable
+
+# À ÉCRIRE. Avant / après, côte à côte :
+#  - rapport à la médiane → le SO₂ à 17 µg/m³ devant les PM2,5 à 83
+#  - écart robuste → l'épisode réel remonte en tête
+# La leçon : l'instrument avec lequel on juge doit lui-même être jugé.
+
+** Trois autres erreurs, et ce qu'elles apprennent
+
+# À ÉCRIRE. Une ligne chacune : le plantage sur archive neuve, l'étiquette
+# coupée qu'aucun test ne voyait, les noms devinés au lieu d'être lus.
+
+* Ce que ça ouvre
+
+** Limites assumées
+
+# À ÉCRIRE. Cinq points ne sont pas la France ; une station et trois jours ne
+# sont pas une étude. Dire ce que le travail ne permet pas de conclure.
+
+** La suite
+
+# À ÉCRIRE. Validation systématique par typologie de station et par saison.
+# C'est là que la chaîne construite ici prend tout son sens.
+
+** Merci
+
+# À ÉCRIRE. Adresse du site, adresse du dépôt, contact.

@@ -1,0 +1,141 @@
+#+TITLE: Chiffres du projet, calculés depuis l'archive
+#+AUTHOR: François BERNARD
+#+PROPERTY: header-args:python :session chiffres :exports results :eval never-export
+
+# Ce fichier ne s'exporte pas seul. Il est inclus par le rapport et par la
+# présentation, pour que les deux citent exactement les mêmes chiffres.
+#
+# Le principe : aucun nombre n'est recopié à la main dans les deux documents.
+# Un chiffre recopié devient faux le jour où la donnée bouge, et personne ne
+# s'en aperçoit. Ici, réévaluer les blocs (C-c C-v b) met tout à jour.
+#
+# Prérequis, depuis la racine du dépôt :
+#   git worktree add archive data          # les données
+#   .venv/bin/python -m warehouse build --data-dir archive/data
+#
+# Puis dans Emacs : C-c C-v b pour tout réévaluer avant export.
+#
+# ATTENTION : les en-têtes de chaque bloc répètent :session, :exports et :eval,
+# alors que la ligne #+PROPERTY ci-dessus dit déjà la même chose. Ce n'est pas
+# une redondance inutile. #+INCLUDE n'importe QUE le contenu du sous-arbre : les
+# mots-clés du fichier, dont #+PROPERTY, restent derrière. Un bloc inclus
+# ailleurs perdrait donc sa session et son réglage d'export, et se retrouverait
+# imprimé tel quel dans le document. Les blocs doivent être autonomes.
+# La ligne #+PROPERTY sert quand on travaille dans ce fichier seul.
+
+* Connexion à l'entrepôt                                           :noexport:
+
+#+NAME: connexion
+#+BEGIN_SRC python :session chiffres :results silent :exports none :eval never-export
+import duckdb, pathlib
+RACINE = pathlib.Path("../..").resolve()
+con = duckdb.connect(str(RACINE / "air.duckdb"), read_only=True)
+def table(sql):
+    r = con.execute(sql)
+    return [[d[0] for d in r.description], None] + [list(x) for x in r.fetchall()]
+#+END_SRC
+
+* Étendue de l'archive
+
+#+NAME: tab-etendue
+#+BEGIN_SRC python :session chiffres :results value table :exports results :eval never-export
+return table("""
+SELECT count(*)                                  AS "Valeurs horaires",
+       count(DISTINCT CAST(measured_at AS DATE)) AS "Journées",
+       count(DISTINCT site)                      AS "Points",
+       count(DISTINCT species)                   AS "Espèces",
+       min(CAST(measured_at AS DATE))            AS "Début",
+       max(CAST(measured_at AS DATE))            AS "Fin"
+FROM readings""")
+#+END_SRC
+
+#+RESULTS: tab-etendue
+|   |
+
+* Ce que contient l'archive, par espèce
+
+#+NAME: tab-especes
+#+BEGIN_SRC python :session chiffres :results value table :exports results :eval never-export
+return table("""
+SELECT species                    AS "Espèce",
+       any_value(unit)            AS "Unité",
+       round(median(mean_value),2) AS "Journée médiane",
+       round(max(mean_value),1)   AS "Pire journée",
+       round(max(max_value),1)    AS "Pointe horaire"
+FROM daily WHERE hours = 24 GROUP BY species ORDER BY species""")
+#+END_SRC
+
+#+RESULTS: tab-especes
+|   |
+
+* Les écarts les plus forts à la normale
+
+# Le tableau qui porte le résultat central : trois espèces indépendantes
+# désignent la même journée au même endroit.
+
+#+NAME: tab-anomalies
+#+BEGIN_SRC python :session chiffres :results value table :exports results :eval never-export
+return table("""
+WITH spread AS (
+  SELECT species, median(mean_value) AS mediane,
+         quantile_cont(mean_value, 0.90) AS chargee
+  FROM daily WHERE hours = 24 GROUP BY species)
+SELECT d.species AS "Espèce", d.day AS "Journée", d.site AS "Point",
+       round(d.mean_value,1) AS "Moyenne",
+       round(s.mediane,2)    AS "Médiane de l'espèce",
+       round((d.mean_value - s.mediane)/nullif(s.chargee - s.mediane,0),1) AS "Écart"
+FROM daily d JOIN spread s USING (species)
+WHERE d.hours = 24
+ORDER BY (d.mean_value - s.mediane)/nullif(s.chargee - s.mediane,0) DESC
+LIMIT 5""")
+#+END_SRC
+
+#+RESULTS: tab-anomalies
+|   |
+
+* Modèle contre mesure au sol, épisode de Bordeaux
+
+# Nécessite le réseau : lit le fichier Parquet de l'AEE directement par URL.
+# Station FR31002, fond urbain, à 4,5 km du point CAMS.
+
+#+NAME: tab-validation
+#+BEGIN_SRC python :session chiffres :results value table :exports results :eval never-export
+con.execute("INSTALL httpfs; LOAD httpfs;")
+URL = ("https://eeadmz1batchservice02.blob.core.windows.net/"
+       "airquality-p/FR/SPO-FR31002_6001.parquet")
+con.execute(f"CREATE OR REPLACE TEMP VIEW station AS SELECT * FROM read_parquet('{URL}')")
+return table("""
+WITH mesure AS (
+  SELECT Start AS h, CAST(Value AS DOUBLE) AS mesure
+  FROM station WHERE Validity >= 1
+    AND CAST(Start AS DATE) BETWEEN DATE '2026-07-25' AND DATE '2026-07-27'),
+modele AS (
+  SELECT measured_at AS h, value AS cams FROM readings
+  WHERE site='Bordeaux' AND species='pm2_5'
+    AND CAST(measured_at AS DATE) BETWEEN DATE '2026-07-25' AND DATE '2026-07-27')
+SELECT CAST(m.h AS DATE) AS "Journée", count(*) AS "Heures",
+       round(avg(s.mesure),1) AS "Station", round(avg(m.cams),1) AS "CAMS",
+       round(avg(m.cams - s.mesure),1) AS "Biais",
+       round(max(s.mesure),1) AS "Pointe station",
+       round(max(m.cams),1)   AS "Pointe CAMS"
+FROM modele m JOIN mesure s USING (h) GROUP BY 1 ORDER BY 1""")
+#+END_SRC
+
+#+RESULTS: tab-validation
+|   |
+
+* Volume et santé du dépôt
+
+#+NAME: tab-depot
+#+BEGIN_SRC python :session chiffres :results value table :exports results :eval never-export
+gaps = con.execute("SELECT count(*) FROM gaps").fetchone()[0]
+pannes = con.execute("SELECT count(*) FROM runs WHERE outcome <> 'ok'").fetchone()[0]
+return [["Indicateur", "Valeur"], None,
+        ["Journées incomplètes", gaps],
+        ["Collectes en panne", pannes],
+        ["Dépendances du collecteur", 0],
+        ["Dépendances de l'entrepôt", 1]]
+#+END_SRC
+
+#+RESULTS: tab-depot
+|   |
