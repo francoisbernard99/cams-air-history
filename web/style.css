@@ -21,21 +21,25 @@
   --sans: system-ui, -apple-system, "Segoe UI", sans-serif;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    color-scheme: dark;
+/* Light is the default, deliberately: the page opens the same way for everyone,
+   whatever their system is set to. Dark is a choice the reader makes with the
+   button in the header, and it is remembered.
 
-    --surface-1: #1a1a19;
-    --page: #0d0d0d;
-    --text-primary: #ffffff;
-    --text-secondary: #c3c2b7;
-    --text-muted: #898781;
-    --grid: #2c2c2a;
-    --axis: #383835;
-    --border: rgba(255, 255, 255, 0.1);
+   The dark steps are their own validated set, chosen against the dark surface —
+   not an inversion of the light ones. */
+:root[data-theme="dark"] {
+  color-scheme: dark;
 
-    --series-1: #3987e5;
-  }
+  --surface-1: #1a1a19;
+  --page: #0d0d0d;
+  --text-primary: #ffffff;
+  --text-secondary: #c3c2b7;
+  --text-muted: #898781;
+  --grid: #2c2c2a;
+  --axis: #383835;
+  --border: rgba(255, 255, 255, 0.1);
+
+  --series-1: #3987e5;
 }
 
 * { box-sizing: border-box; }
@@ -53,6 +57,27 @@ body {
 main, header, footer { max-width: 62rem; margin: 0 auto; }
 
 header { padding: 3rem 0 1.5rem; }
+
+.header-bar {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+#theme-toggle {
+  flex: none;
+  padding: 0.4rem 0.85rem;
+  background: var(--surface-1);
+  color: var(--text-secondary);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font: inherit;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+#theme-toggle:hover { color: var(--text-primary); }
 
 h1 {
   margin: 0 0 0.5rem;

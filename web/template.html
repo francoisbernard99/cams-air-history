@@ -8,11 +8,24 @@
 <style>
 $style
 </style>
+<script>
+/* Applied before the first paint, so a reader who chose dark never sees the
+   page flash light on the way in. Wrapped because private-browsing modes can
+   make localStorage throw on access. */
+try {
+  if (localStorage.getItem("theme") === "dark") {
+    document.documentElement.setAttribute("data-theme", "dark");
+  }
+} catch (e) {}
+</script>
 </head>
 <body>
 
 <header>
+  <div class="header-bar">
   <h1>Qualité de l'air en France</h1>
+  <button type="button" id="theme-toggle" aria-pressed="false">Thème sombre</button>
+  </div>
   <p class="lede">
     Cliquez n'importe où sur la carte : six polluants, trente jours d'historique,
     calculés à la volée. Plus une archive de $hero_value journées.

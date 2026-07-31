@@ -8,6 +8,29 @@
  * No map library and no tile server: the outline is SVG rendered at build time,
  * and the projection is inverted here in three lines of arithmetic.
  */
+/* Theme switch. Kept in its own block, before the map guard below: the button
+   has to keep working on a page where the map never initialised. */
+(function () {
+  "use strict";
+
+  var button = document.getElementById("theme-toggle");
+  if (!button) return;
+
+  function apply(dark) {
+    if (dark) document.documentElement.setAttribute("data-theme", "dark");
+    else document.documentElement.removeAttribute("data-theme");
+    button.setAttribute("aria-pressed", String(dark));
+    button.textContent = dark ? "Thème clair" : "Thème sombre";
+    try { localStorage.setItem("theme", dark ? "dark" : "light"); } catch (e) {}
+  }
+
+  apply(document.documentElement.getAttribute("data-theme") === "dark");
+
+  button.addEventListener("click", function () {
+    apply(document.documentElement.getAttribute("data-theme") !== "dark");
+  });
+})();
+
 (function () {
   "use strict";
 

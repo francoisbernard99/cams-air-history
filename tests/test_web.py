@@ -56,6 +56,25 @@ def test_the_only_live_call_goes_to_the_documented_api(page):
     }, hosts
 
 
+def test_light_is_the_default_theme(page):
+    """The page must open the same way for everyone, whatever their system is
+    set to. A `prefers-color-scheme` rule would quietly override that."""
+    assert "prefers-color-scheme" not in page
+
+    # The served <html> tag must carry no theme: dark is only ever stamped on it
+    # later, by the reader's own stored choice.
+    html_tag = re.search(r"<html[^>]*>", page).group(0)
+    assert "data-theme" not in html_tag, html_tag
+
+
+def test_a_theme_switch_is_offered(page):
+    """Light by default is a choice made for the reader; the button is what
+    hands the choice back."""
+    assert 'id="theme-toggle"' in page
+    assert ':root[data-theme="dark"]' in page
+    assert "localStorage" in page
+
+
 def test_the_caveat_is_present(page):
     """If this drops out, the page starts passing modelled values off as
     measurements. Asserted on the claims rather than on one exact sentence, so
