@@ -17,11 +17,12 @@ from string import Template
 import duckdb
 
 from collector import config
-from web import charts
+from web import charts, map as mapview
 
 HERE = Path(__file__).parent
 TEMPLATE_PATH = HERE / "template.html"
 STYLE_PATH = HERE / "style.css"
+SCRIPT_PATH = HERE / "app.js"
 
 DEFAULT_DATABASE = "air.duckdb"
 DEFAULT_OUTPUT = "public"
@@ -251,9 +252,11 @@ def render(database: str = DEFAULT_DATABASE) -> str:
         last_run = connection.execute("SELECT max(run_at) FROM runs").fetchone()[0]
         # Read from the archive rather than from config: the page must name the
         # points it actually plotted, not the ones the collector is set to.
-        sites = [row[0] for row in connection.execute(
-            "SELECT DISTINCT site FROM readings ORDER BY site"
-        ).fetchall()]
+        site_rows = connection.execute("""
+            SELECT site, any_value(latitude) AS latitude, any_value(longitude) AS longitude
+            FROM readings GROUP BY site ORDER BY site
+        """).fetchall()
+        sites = [row[0] for row in site_rows]
         episode_hours = (
             _episode_hours(connection, anomalies[0][2], anomalies[0][0], anomalies[0][1])
             if anomalies else []
@@ -378,6 +381,13 @@ def render(database: str = DEFAULT_DATABASE) -> str:
         freshness=freshness,
         hero_value=f"{summary['days']:,}".replace(",", " "),
         hero_label="journées archivées, heure par heure",
+        script=SCRIPT_PATH.read_text(encoding="utf-8"),
+        map=mapview.figure(
+            [{"name": name, "latitude": lat, "longitude": lon}
+             for name, lat, lon in site_rows],
+            ordered,
+            SPECIES_LABELS,
+        ),
         site_count=str(len(sites)),
         site_list=escape(", ".join(sites[:-1]) + " et " + sites[-1]) if len(sites) > 1
         else escape(sites[0]) if sites else "aucun",

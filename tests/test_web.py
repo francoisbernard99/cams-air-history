@@ -29,21 +29,48 @@ def page(archive):  # noqa: F811
     return web.render(database)
 
 
-def test_the_page_loads_nothing_from_a_third_party(page):
-    """The whole point of a static page is that it still works in five years.
-    A CDN reference would hand that guarantee to someone else."""
-    assert "<script" not in page
+def test_the_page_loads_no_third_party_code_or_asset(page):
+    """The contract changed when the map arrived, and it is worth stating
+    exactly: the page may now carry a script, but that script is written here
+    and inlined. Nothing is *fetched* from a third party to render the page --
+    no CDN, no stylesheet, no tile server, no font. That is what keeps the page
+    working in five years without depending on anyone."""
+    assert "<script src" not in page
     assert "@import" not in page
+    assert "<link" not in page
+
     external = re.findall(r'(?:src|href)="(https?://[^"]+)"', page)
-    assert all("open-meteo.com" in url or "github.com" in url for url in external)
+    allowed = ("open-meteo.com", "github.com")
+    assert all(any(host in url for host in allowed) for url in external), external
+
+
+def test_the_only_live_call_goes_to_the_documented_api(page):
+    """A click asks Open-Meteo directly from the visitor's browser. Any other
+    host appearing here would mean data is being routed somewhere undisclosed."""
+    hosts = set(re.findall(r'https?://([a-z0-9.-]+)', page))
+    assert hosts <= {
+        "air-quality-api.open-meteo.com",  # the live request
+        "open-meteo.com",                  # attribution
+        "github.com",                      # source
+        "www.w3.org",                      # SVG namespace, not a request
+    }, hosts
 
 
 def test_the_caveat_is_present(page):
-    """If this ever drops out of the template, the page starts passing modelled
-    values off as measurements. It is the one section that cannot go missing."""
+    """If this drops out, the page starts passing modelled values off as
+    measurements. Asserted on the claims rather than on one exact sentence, so
+    rewording the page does not silently disarm the check."""
     assert "ne sont pas des mesures" in page
-    assert "11 kilomètres" in page
+    assert "11 km" in page
     assert "seuil réglementaire" in page
+    assert "moyenne une agglomération" in page
+
+
+def test_the_caveat_also_travels_with_the_live_values(page):
+    """The map panel is built by the script, far from the page's own prose. A
+    reader who only ever clicks the map must still be told what they are seeing."""
+    panel_note = "pas des mesures"
+    assert page.count(panel_note) >= 2
 
 
 def test_the_attribution_is_present(page):

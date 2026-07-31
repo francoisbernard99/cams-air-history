@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>$title</title>
-<meta name="description" content="Historique horaire de la qualité de l'air en France, issu du service européen CAMS. Valeurs modélisées, pas des mesures.">
+<meta name="description" content="Cliquez n'importe où en France pour obtenir les concentrations de six polluants. Valeurs modélisées CAMS, pas des mesures.">
 <style>
 $style
 </style>
@@ -12,66 +12,40 @@ $style
 <body>
 
 <header>
-  <h1>Qualité de l'air en France : l'historique</h1>
+  <h1>Qualité de l'air en France</h1>
   <p class="lede">
-    Chaque matin, un programme va chercher les champs de qualité de l'air du
-    service européen CAMS, les archive, et les rend interrogeables. Cette page
-    est reconstruite à partir de cette archive.
+    Cliquez n'importe où sur la carte : six polluants, trente jours d'historique,
+    calculés à la volée. Plus une archive de $hero_value journées.
   </p>
-  <p class="note">Dernière collecte : $updated · $freshness</p>
+  <p class="note">Archive mise à jour le $updated · $freshness</p>
 </header>
 
 <main>
 
-  <div class="hero">
-    <span class="hero-value">$hero_value</span>
-    <span class="hero-label">$hero_label</span>
-  </div>
+  <!-- The map is hidden until the script runs, so a browser without it never
+       sees an empty frame. Everything below is rendered by Python and stays
+       readable regardless. -->
+  $map
 
-  <div class="tiles">
-    $tiles
-  </div>
-
-  <!-- The caveat comes before any chart on purpose: it changes how the charts
-       should be read, so reading it afterwards is too late. -->
-  <section class="caveat">
-    <h2>Ce que ces chiffres ne sont pas</h2>
-    <p>
-      <strong>Ce ne sont pas des mesures.</strong> CAMS est un modèle. Il exploite
-      des observations satellite et des stations au sol, mais ce qu'il renvoie est
-      un champ <em>calculé</em>. Une valeur affichée ici pour Paris à 14 h n'a pas
-      été mesurée à Paris à 14 h : elle a été simulée, sur une maille d'environ
-      11 kilomètres de côté.
+  <noscript>
+    <p class="note callout">
+      La carte interactive demande JavaScript. Tout le reste de cette page —
+      archive, épisodes, état des données — s'affiche sans.
     </p>
-    <ul>
-      <li>
-        Une maille de 11 km moyenne une agglomération entière. Elle ne distingue
-        pas un boulevard d'un parc, alors que l'écart entre les deux peut dépasser
-        l'écart entre deux villes.
-      </li>
-      <li>
-        Un champ modélisé est lisse par construction. Les pics courts et très
-        localisés y sont atténués, parfois absents.
-      </li>
-      <li>
-        Comparer ces valeurs à un seuil réglementaire n'a pas de sens : ces seuils
-        s'appliquent à des mesures normalisées en station, pas à une sortie de
-        modèle.
-      </li>
-    </ul>
-    <p class="note" style="margin-top:0.9rem">
-      Ce que cette page montre est donc une <strong>estimation régionale</strong>,
-      utile pour observer des tendances et des épisodes, inutile pour dire ce
-      qu'une personne respire à une adresse donnée.
-    </p>
-  </section>
+  </noscript>
 
-  <h2>Les 90 derniers jours</h2>
+  <p class="note callout">
+    <strong>Ce ne sont pas des mesures.</strong> CAMS est un modèle : une maille
+    d'environ 11 km, qui moyenne une agglomération entière et lisse les pics
+    localisés. Utile pour des tendances et des épisodes, pas pour dire ce qu'une
+    personne respire à une adresse donnée.
+    <a href="#methode">Ce que ça implique exactement</a>
+  </p>
+
+  <h2>L'archive : les 90 derniers jours</h2>
   <p class="note">
     Moyenne journalière de $site_count points : $site_list. La zone claire
-    couvre l'écart entre le point le plus bas et le plus haut ce jour-là : une
-    seule courbe ne doit pas laisser croire à une valeur uniforme sur le
-    territoire.
+    couvre l'écart entre le point le plus bas et le plus haut ce jour-là.
   </p>
   <div class="panels">
     $panels
@@ -87,8 +61,6 @@ $style
   <h2>Les journées les plus chargées</h2>
   <p class="note">
     La pire journée de l'archive pour chaque espèce, jours incomplets exclus.
-    Une journée qui ne compte que quelques heures produirait une moyenne
-    trompeuse.
   </p>
   <div class="table-wrap">
     $worst_table
@@ -97,8 +69,8 @@ $style
   <h2>État de l'archive</h2>
   <p class="note">
     Une marque par journée archivée. Le rouge signale une journée incomplète,
-    laissée telle quelle : lorsque la source ne répond pas, l'archive préfère
-    un trou visible à un chiffre inventé.
+    laissée telle quelle : lorsque la source ne répond pas, l'archive préfère un
+    trou visible à un chiffre inventé.
   </p>
   <div class="panel">
     $coverage_strip
@@ -109,6 +81,39 @@ $style
   </div>
   $health_table
 
+  <h2 id="methode">Méthode et limites</h2>
+  <details>
+    <summary>Ce que ces chiffres sont, et ce qu'ils ne sont pas</summary>
+    <div class="prose">
+      <p>
+        CAMS assimile des observations satellite et des stations au sol, mais ce
+        qu'il renvoie est un champ <em>calculé</em>. Une valeur affichée ici pour
+        Paris à 14 h n'a pas été mesurée à Paris à 14 h : elle a été simulée.
+      </p>
+      <ul>
+        <li>
+          Une maille de 11 km moyenne une agglomération entière. Elle ne distingue
+          pas un boulevard d'un parc, alors que l'écart entre les deux peut
+          dépasser l'écart entre deux villes.
+        </li>
+        <li>
+          Un champ modélisé est lisse par construction. Les pics courts et très
+          localisés y sont atténués, parfois absents.
+        </li>
+        <li>
+          Comparer ces valeurs à un seuil réglementaire n'a pas de sens : ces
+          seuils s'appliquent à des mesures normalisées en station.
+        </li>
+      </ul>
+      <p>
+        Les valeurs affichées au clic sont demandées en direct par votre
+        navigateur à Open-Meteo ; elles ne transitent par aucun serveur
+        intermédiaire. L'archive, elle, est collectée chaque matin et publiée
+        avec son journal d'incidents.
+      </p>
+    </div>
+  </details>
+
 </main>
 
 <footer>
@@ -116,6 +121,7 @@ $style
     Données du service européen <strong>CAMS</strong> (Copernicus Atmosphere
     Monitoring Service), distribuées par
     <a href="https://open-meteo.com">Open-Meteo</a> sous licence CC-BY 4.0.
+    Fond de carte dérivé d'Admin Express (IGN), Licence Ouverte.
   </p>
   <p>
     Page fabriquée par
@@ -125,6 +131,10 @@ $style
   </p>
   <p class="note">Page générée le $generated_at.</p>
 </footer>
+
+<script>
+$script
+</script>
 
 </body>
 </html>
