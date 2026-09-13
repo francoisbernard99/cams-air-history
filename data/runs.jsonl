@@ -46,3 +46,4 @@
 {"days": 8, "duration_s": 0.64, "outcome": "ok", "range": "2026-09-03..2026-09-10", "rows": 5760, "run_at": "2026-09-10T09:46:08+00:00", "sites": 5, "species": 6}
 {"days": 8, "duration_s": 0.97, "outcome": "ok", "range": "2026-09-04..2026-09-11", "rows": 5760, "run_at": "2026-09-11T09:43:06+00:00", "sites": 5, "species": 6}
 {"days": 8, "duration_s": 0.91, "outcome": "ok", "range": "2026-09-05..2026-09-12", "rows": 5760, "run_at": "2026-09-12T09:22:38+00:00", "sites": 5, "species": 6}
+{"days": 8, "duration_s": 0.9, "outcome": "ok", "range": "2026-09-06..2026-09-13", "rows": 5760, "run_at": "2026-09-13T10:18:34+00:00", "sites": 5, "species": 6}
